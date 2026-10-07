@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Material 3 colour roles for dark mode. See values/colors.xml. -->
+<resources>
+    <color name="md_primary">#B0C6FF</color>
+    <color name="md_on_primary">#002C6F</color>
+    <color name="md_primary_container">#14438F</color>
+    <color name="md_on_primary_container">#D9E2FF</color>
+
+    <color name="md_secondary">#BFC6DC</color>
+    <color name="md_on_secondary">#293041</color>
+    <color name="md_secondary_container">#3F4759</color>
+    <color name="md_on_secondary_container">#DBE2F9</color>
+
+    <color name="md_tertiary">#DEBCDF</color>
+    <color name="md_on_tertiary">#402843</color>
+    <color name="md_tertiary_container">#583E5B</color>
+    <color name="md_on_tertiary_container">#FBD7FC</color>
+
+    <color name="md_error">#FFB4AB</color>
+    <color name="md_on_error">#690005</color>
+    <color name="md_error_container">#93000A</color>
+    <color name="md_on_error_container">#FFDAD6</color>
+
+    <color name="md_surface">#111318</color>
+    <color name="md_on_surface">#E2E2E9</color>
+    <color name="md_surface_variant">#44474F</color>
+    <color name="md_on_surface_variant">#C5C6D0</color>
+    <color name="md_outline">#8F9099</color>
+    <color name="md_outline_variant">#44474F</color>
+
+    <color name="md_surface_container_lowest">#0C0E13</color>
+    <color name="md_surface_container_low">#1A1B20</color>
+    <color name="md_surface_container">#1E1F25</color>
+    <color name="md_surface_container_high">#282A2F</color>
+    <color name="md_surface_container_highest">#33353A</color>
+</resources>

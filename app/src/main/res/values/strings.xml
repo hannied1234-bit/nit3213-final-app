@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Topic Explorer</string>
+
+    <!-- Screen titles shown in the toolbar (set from nav_graph.xml) -->
+    <string name="title_login">Sign in</string>
+    <string name="title_dashboard">Dashboard</string>
+    <string name="title_details">Details</string>
+
+    <!-- Login screen -->
+    <string name="login_heading">Welcome</string>
+    <string name="login_subheading">Sign in with your first name and student ID to explore your topic.</string>
+    <string name="login_campus">Footscray campus</string>
+    <string name="hint_first_name">First name</string>
+    <string name="hint_student_id">Student ID</string>
+    <string name="helper_student_id">This is your password, for example s12345678</string>
+    <string name="action_sign_in">Sign in</string>
+
+    <!-- Dashboard screen -->
+    <string name="action_log_out">Log out</string>
+    <string name="action_try_again">Try again</string>
+    <string name="dashboard_empty">There are no items to show for this topic yet.</string>
+    <plurals name="entity_count">
+        <item quantity="one">%d item</item>
+        <item quantity="other">%d items</item>
+    </plurals>
+
+    <!-- Details screen -->
+    <string name="details_section_information">Information</string>
+    <string name="details_section_description">Description</string>
+
+    <!-- Fallbacks for missing data -->
+    <string name="entity_untitled">Untitled item</string>
+    <string name="value_not_provided">Not provided</string>
+    <string name="description_not_provided">No description has been provided for this item.</string>
+
+    <!-- Form validation messages -->
+    <string name="error_username_required">Please enter your first name</string>
+    <string name="error_password_required">Please enter your student ID</string>
+    <string name="error_password_format">Your student ID should be a lowercase s followed by numbers, for example s12345678</string>
+
+    <!-- Network error messages -->
+    <string name="error_invalid_credentials">Sign in failed. Please check your first name and student ID and try again.</string>
+    <string name="error_not_found">We couldn\'t find any data for your topic.</string>
+    <string name="error_timeout">The server took too long to respond. It may be waking up, so please try again in a moment.</string>
+    <string name="error_no_connection">We couldn\'t reach the server. Please check your internet connection and try again.</string>
+    <string name="error_server">The server ran into a problem. Please try again later.</string>
+    <string name="error_unknown">Something went wrong. Please try again.</string>
+    <string name="error_missing_keypass">Your session has expired. Please sign in again.</string>
+</resources>
