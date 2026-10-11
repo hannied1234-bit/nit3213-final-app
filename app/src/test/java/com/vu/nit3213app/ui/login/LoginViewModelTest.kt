@@ -26,6 +26,10 @@ import org.junit.Test
  * The real AuthRepository would call the internet, so a MockK mock stands in for
  * it. Each test tells the mock what to return (coEvery), calls the ViewModel,
  * then checks the resulting state (Given, When, Then).
+ *
+ * The validation tests also check that the repository was never called. Bad
+ * input should be caught on the phone, and those checks prove no request
+ * went out.
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 class LoginViewModelTest {
@@ -36,16 +40,21 @@ class LoginViewModelTest {
     private val authRepository: AuthRepository = mockk()
     private lateinit var viewModel: LoginViewModel
 
+    // A new ViewModel for every test, so state from one test can't carry over
+    // into the next. JUnit also creates a new instance of this class per test.
     @Before
     fun setUp() {
         viewModel = LoginViewModel(authRepository)
     }
 
+    // LoginUiState() with no arguments is the blank form, so comparing against
+    // it checks every field at once.
     @Test
     fun `initial state has no errors and is not loading`() {
         assertEquals(LoginUiState(), viewModel.uiState.value)
     }
 
+    // Spaces only should count as blank, because the ViewModel trims first.
     @Test
     fun `blank first name shows an error and does not call the API`() {
         // When
@@ -69,6 +78,7 @@ class LoginViewModelTest {
         coVerify(exactly = 0) { authRepository.login(any(), any()) }
     }
 
+    // The most likely real mistake: typing the ID number without the "s".
     @Test
     fun `student ID without the leading s shows a format error`() {
         viewModel.login(username = "Adam", password = "12345678")
@@ -77,6 +87,8 @@ class LoginViewModelTest {
         coVerify(exactly = 0) { authRepository.login(any(), any()) }
     }
 
+    // Confirms both fields are validated before returning, instead of
+    // stopping at the first problem.
     @Test
     fun `both fields blank shows both errors`() {
         viewModel.login(username = "", password = "")
@@ -88,7 +100,8 @@ class LoginViewModelTest {
 
     @Test
     fun `successful login trims the input and exposes the keypass`() {
-        // Given
+        // Given a mock that only answers for the trimmed values. If the
+        // ViewModel forgot to trim, MockK would find no match and throw.
         coEvery { authRepository.login("Adam", "s12345678") } returns DataResult.Success("animals")
 
         // When
@@ -128,6 +141,8 @@ class LoginViewModelTest {
     @Test
     fun `state shows loading while the request is running`() = runTest {
         // Given a request that does not finish until we say so
+        // coAnswers runs a suspending block, and await() suspends until
+        // complete() is called further down.
         val pendingResult = CompletableDeferred<DataResult<String>>()
         coEvery { authRepository.login(any(), any()) } coAnswers { pendingResult.await() }
 
@@ -146,6 +161,8 @@ class LoginViewModelTest {
         assertEquals("animals", viewModel.uiState.value.keypass)
     }
 
+    // The second login() call lands while the first request is still held
+    // open, which is exactly the double tap the isLoading guard stops.
     @Test
     fun `second tap while loading does not send a second request`() = runTest {
         val pendingResult = CompletableDeferred<DataResult<String>>()
@@ -159,6 +176,8 @@ class LoginViewModelTest {
         coVerify(exactly = 1) { authRepository.login(any(), any()) }
     }
 
+    // Without this, coming back to the Login screen would see the old keypass
+    // and jump straight to the Dashboard again.
     @Test
     fun `onNavigatedToDashboard clears the keypass so navigation happens once`() {
         coEvery { authRepository.login(any(), any()) } returns DataResult.Success("animals")
@@ -169,6 +188,7 @@ class LoginViewModelTest {
         assertNull(viewModel.uiState.value.keypass)
     }
 
+    // Also checks that fixing one field leaves the other field's error alone.
     @Test
     fun `typing in a field clears that field's error`() {
         viewModel.login(username = "", password = "")

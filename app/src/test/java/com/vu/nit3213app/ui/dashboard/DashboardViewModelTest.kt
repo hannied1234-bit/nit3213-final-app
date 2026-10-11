@@ -26,10 +26,19 @@ import org.junit.Test
  * The ViewModel loads data in its init block, so the mock repository is set up
  * before each ViewModel is created. The keypass is supplied through a
  * SavedStateHandle, exactly as Safe Args would supply it in the running app.
+ *
+ * SavedStateHandle has a public constructor that takes a plain map, so it can
+ * be built directly here. There's no need to mock it.
+ *
+ * Most tests don't use runTest. MainDispatcherRule's UnconfinedTestDispatcher
+ * runs viewModelScope.launch to completion straight away, so the final state
+ * is ready as soon as the constructor returns.
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 class DashboardViewModelTest {
 
+    // @get:Rule puts the annotation on the property's getter, which is where
+    // JUnit 4 looks for rules. A plain @Rule on a Kotlin property isn't seen.
     @get:Rule
     val mainDispatcherRule = MainDispatcherRule()
 
@@ -43,6 +52,8 @@ class DashboardViewModelTest {
         description = "A famous painting."
     )
 
+    // Passing null leaves the keypass out of the arguments entirely, which
+    // copies a broken or missing argument in the real app.
     private fun createViewModel(keypass: String? = KEYPASS): DashboardViewModel {
         val arguments = if (keypass == null) emptyMap() else mapOf(KEYPASS_KEY to keypass)
         return DashboardViewModel(dashboardRepository, SavedStateHandle(arguments))
@@ -65,6 +76,8 @@ class DashboardViewModelTest {
         coVerify(exactly = 1) { dashboardRepository.getDashboard(KEYPASS) }
     }
 
+    // An empty list is a valid answer from the API, not an error. The Fragment
+    // shows its "nothing here" message for this state.
     @Test
     fun `empty list from the API is still a success`() {
         coEvery { dashboardRepository.getDashboard(any()) } returns
@@ -85,6 +98,8 @@ class DashboardViewModelTest {
         assertEquals(DashboardUiState.Error(R.string.error_not_found), viewModel.uiState.value)
     }
 
+    // No coEvery here on purpose. The mock is strict, so if the ViewModel did
+    // call the repository the test would fail with an exception.
     @Test
     fun `missing keypass shows an error without calling the API`() {
         val viewModel = createViewModel(keypass = null)
@@ -96,6 +111,7 @@ class DashboardViewModelTest {
     @Test
     fun `try again after an error loads the data`() {
         // Given the first call fails and the second succeeds
+        // returnsMany hands out the values in order, one per call.
         coEvery { dashboardRepository.getDashboard(any()) } returnsMany listOf(
             DataResult.Error(DataError.NO_CONNECTION),
             DataResult.Success(DashboardData(entities = listOf(sampleEntity), total = 1))
@@ -114,6 +130,9 @@ class DashboardViewModelTest {
         coVerify(exactly = 2) { dashboardRepository.getDashboard(KEYPASS) }
     }
 
+    // The Loading state normally passes too quickly to check. A
+    // CompletableDeferred holds the fake request open until the test
+    // completes it, so the state can be read while it's still loading.
     @Test
     fun `state is loading until the API responds`() = runTest {
         val pendingResult = CompletableDeferred<DataResult<DashboardData>>()
@@ -123,6 +142,8 @@ class DashboardViewModelTest {
         assertEquals(DashboardUiState.Loading, viewModel.uiState.value)
 
         pendingResult.complete(DataResult.Success(DashboardData(entities = listOf(sampleEntity), total = 1)))
+        // Lets the suspended coroutine resume and write the Success state
+        // before the assertion below reads it.
         advanceUntilIdle()
 
         assertEquals(
@@ -133,6 +154,8 @@ class DashboardViewModelTest {
 
     private companion object {
         const val KEYPASS = "art"
+        // Uses the ViewModel's own constant, so the test can't drift out of
+        // step if the argument name ever changes.
         const val KEYPASS_KEY = DashboardViewModel.KEYPASS_ARGUMENT
     }
 }

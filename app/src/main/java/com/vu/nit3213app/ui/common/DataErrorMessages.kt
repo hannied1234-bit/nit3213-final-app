@@ -10,6 +10,18 @@ import com.vu.nit3213app.domain.model.DataError
  * The ViewModels expose string resource IDs rather than text, so they do not need
  * an Android Context. That keeps them easy to unit test, and the text itself
  * stays in strings.xml where it can be translated.
+ *
+ * It's written as an extension function, so callers write
+ * result.error.toMessageRes(), which reads naturally. It lives in the UI layer
+ * because R.string belongs to Android, and the domain layer has to stay free
+ * of Android code.
+ *
+ * @StringRes on the return type lets Android Lint warn if the result is ever
+ * passed somewhere expecting a different kind of resource, such as a colour.
+ *
+ * The "when" has no else branch. If a new DataError is added later, this
+ * stops compiling until it gets a message, so no error can reach the user
+ * without one.
  */
 @StringRes
 fun DataError.toMessageRes(): Int = when (this) {

@@ -22,6 +22,10 @@ import java.io.IOException
 /**
  * Unit tests for [DashboardRepositoryImpl]. The API is mocked, while the real
  * EntityMapper is used because it is plain Kotlin with no side effects.
+ *
+ * Using the real mapper makes these small integration tests. They check that
+ * a raw JSON-shaped response comes out as the exact Entity objects the screen
+ * will show, which a mocked mapper couldn't prove.
  */
 class DashboardRepositoryImplTest {
 
@@ -30,7 +34,8 @@ class DashboardRepositoryImplTest {
 
     @Test
     fun `maps the API response into dashboard data`() = runTest {
-        // Given
+        // Given a response shaped like real Moshi output: the year is a Double
+        // and the description sits among the other fields
         val response = DashboardResponse(
             entities = listOf(
                 mapOf(
@@ -46,7 +51,8 @@ class DashboardRepositoryImplTest {
         // When
         val result = repository.getDashboard("art")
 
-        // Then
+        // Then the labels are readable, the year has no ".0" and the
+        // description has been moved out of the properties
         val expected = DashboardData(
             entities = listOf(
                 Entity(
@@ -60,9 +66,11 @@ class DashboardRepositoryImplTest {
             total = 1
         )
         assertEquals(DataResult.Success(expected), result)
+        // exactly = 1 makes sure the repository doesn't retry or call twice.
         coVerify(exactly = 1) { apiService.getDashboard("art") }
     }
 
+    // The dashboard endpoint returns 404 for a keypass it doesn't know.
     @Test
     fun `404 response means the keypass was not found`() = runTest {
         coEvery { apiService.getDashboard(any()) } throws
@@ -82,6 +90,8 @@ class DashboardRepositoryImplTest {
         assertEquals(DataResult.Error(DataError.NO_CONNECTION), result)
     }
 
+    // Covers the final catch-all in safeApiCall. Any exception that isn't a
+    // network one must still come back as a result instead of crashing the app.
     @Test
     fun `unexpected exception is reported as unknown instead of crashing`() = runTest {
         coEvery { apiService.getDashboard(any()) } throws IllegalStateException("bad JSON shape")

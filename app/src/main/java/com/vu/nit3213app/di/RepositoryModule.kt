@@ -17,11 +17,18 @@ import javax.inject.Singleton
  * to use. @Binds does this with less generated code than @Provides, because Hilt
  * already knows how to build the implementation from its @Inject constructor.
  * Swapping in a different implementation later means changing only this file.
+ *
+ * It's an abstract class because @Binds functions have no body. They're
+ * declarations that Hilt reads at compile time, and Kotlin only allows bodiless
+ * functions in an abstract class or an interface.
  */
 @Module
 @InstallIn(SingletonComponent::class)
 abstract class RepositoryModule {
 
+    // Read this as "when someone asks for an AuthRepository, give them an
+    // AuthRepositoryImpl". @Singleton means the same instance is shared by every
+    // ViewModel, which is fine because the repositories hold no per-screen state.
     @Binds
     @Singleton
     abstract fun bindAuthRepository(impl: AuthRepositoryImpl): AuthRepository
