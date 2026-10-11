@@ -21,9 +21,9 @@ import androidx.annotation.StringRes
 data class LoginUiState(
     /** True while the auth request is running. Shows the spinner and locks the form. */
     val isLoading: Boolean = false,
-    /** Error under the first name field, such as "Enter your first name". */
+    /** Error under the student ID (username) field, for a blank or badly formatted ID. */
     @StringRes val usernameError: Int? = null,
-    /** Error under the student ID field, for a blank or badly formatted ID. */
+    /** Error under the first name (password) field, shown when it's left blank. */
     @StringRes val passwordError: Int? = null,
     /** Error from the request itself, shown in the banner under the form. */
     @StringRes val loginError: Int? = null,

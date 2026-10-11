@@ -31,7 +31,7 @@ sealed interface DataResult<out T> {
  * out of here means the domain layer has no Android dependency at all.
  */
 enum class DataError {
-    /** The first name or student ID was rejected by the auth endpoint. */
+    /** The student ID or first name was rejected by the auth endpoint. */
     INVALID_CREDENTIALS,
 
     /** The server could not find the requested resource, for example an unknown keypass. */

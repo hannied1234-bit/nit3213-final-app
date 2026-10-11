@@ -56,9 +56,9 @@ class LoginViewModelTest {
 
     // Spaces only should count as blank, because the ViewModel trims first.
     @Test
-    fun `blank first name shows an error and does not call the API`() {
+    fun `blank student ID shows an error and does not call the API`() {
         // When
-        viewModel.login(username = "   ", password = "s12345678")
+        viewModel.login(username = "   ", password = "Adam")
 
         // Then
         val state = viewModel.uiState.value
@@ -69,8 +69,8 @@ class LoginViewModelTest {
     }
 
     @Test
-    fun `blank student ID shows an error and does not call the API`() {
-        viewModel.login(username = "Adam", password = "")
+    fun `blank first name shows an error and does not call the API`() {
+        viewModel.login(username = "12345678", password = "")
 
         val state = viewModel.uiState.value
         assertEquals(R.string.error_password_required, state.passwordError)
@@ -78,12 +78,13 @@ class LoginViewModelTest {
         coVerify(exactly = 0) { authRepository.login(any(), any()) }
     }
 
-    // The most likely real mistake: typing the ID number without the "s".
+    // The most likely real mistake: copying the ID from a student card, where
+    // it's printed with an "s" in front. The spec wants digits only.
     @Test
-    fun `student ID without the leading s shows a format error`() {
-        viewModel.login(username = "Adam", password = "12345678")
+    fun `student ID with a leading s shows a format error`() {
+        viewModel.login(username = "s12345678", password = "Adam")
 
-        assertEquals(R.string.error_password_format, viewModel.uiState.value.passwordError)
+        assertEquals(R.string.error_username_format, viewModel.uiState.value.usernameError)
         coVerify(exactly = 0) { authRepository.login(any(), any()) }
     }
 
@@ -102,17 +103,17 @@ class LoginViewModelTest {
     fun `successful login trims the input and exposes the keypass`() {
         // Given a mock that only answers for the trimmed values. If the
         // ViewModel forgot to trim, MockK would find no match and throw.
-        coEvery { authRepository.login("Adam", "s12345678") } returns DataResult.Success("animals")
+        coEvery { authRepository.login("12345678", "Adam") } returns DataResult.Success("animals")
 
         // When
-        viewModel.login(username = "  Adam ", password = " s12345678  ")
+        viewModel.login(username = " 12345678  ", password = "  Adam ")
 
         // Then
         val state = viewModel.uiState.value
         assertEquals("animals", state.keypass)
         assertFalse(state.isLoading)
         assertNull(state.loginError)
-        coVerify(exactly = 1) { authRepository.login("Adam", "s12345678") }
+        coVerify(exactly = 1) { authRepository.login("12345678", "Adam") }
     }
 
     @Test
@@ -120,7 +121,7 @@ class LoginViewModelTest {
         coEvery { authRepository.login(any(), any()) } returns
             DataResult.Error(DataError.INVALID_CREDENTIALS)
 
-        viewModel.login(username = "Adam", password = "s12345678")
+        viewModel.login(username = "12345678", password = "Adam")
 
         val state = viewModel.uiState.value
         assertEquals(R.string.error_invalid_credentials, state.loginError)
@@ -133,7 +134,7 @@ class LoginViewModelTest {
         coEvery { authRepository.login(any(), any()) } returns
             DataResult.Error(DataError.NO_CONNECTION)
 
-        viewModel.login(username = "Adam", password = "s12345678")
+        viewModel.login(username = "12345678", password = "Adam")
 
         assertEquals(R.string.error_no_connection, viewModel.uiState.value.loginError)
     }
@@ -147,7 +148,7 @@ class LoginViewModelTest {
         coEvery { authRepository.login(any(), any()) } coAnswers { pendingResult.await() }
 
         // When
-        viewModel.login(username = "Adam", password = "s12345678")
+        viewModel.login(username = "12345678", password = "Adam")
 
         // Then it is loading
         assertTrue(viewModel.uiState.value.isLoading)
@@ -168,8 +169,8 @@ class LoginViewModelTest {
         val pendingResult = CompletableDeferred<DataResult<String>>()
         coEvery { authRepository.login(any(), any()) } coAnswers { pendingResult.await() }
 
-        viewModel.login(username = "Adam", password = "s12345678")
-        viewModel.login(username = "Adam", password = "s12345678")
+        viewModel.login(username = "12345678", password = "Adam")
+        viewModel.login(username = "12345678", password = "Adam")
         pendingResult.complete(DataResult.Success("animals"))
         advanceUntilIdle()
 
@@ -181,7 +182,7 @@ class LoginViewModelTest {
     @Test
     fun `onNavigatedToDashboard clears the keypass so navigation happens once`() {
         coEvery { authRepository.login(any(), any()) } returns DataResult.Success("animals")
-        viewModel.login(username = "Adam", password = "s12345678")
+        viewModel.login(username = "12345678", password = "Adam")
 
         viewModel.onNavigatedToDashboard()
 

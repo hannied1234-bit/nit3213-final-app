@@ -9,11 +9,12 @@
 
     <!-- Login screen -->
     <string name="login_heading">Welcome</string>
-    <string name="login_subheading">Sign in with your first name and student ID to explore your topic.</string>
+    <string name="login_subheading">Sign in with your student ID and first name to explore your topic.</string>
     <string name="login_campus">Footscray campus</string>
-    <string name="hint_first_name">First name</string>
     <string name="hint_student_id">Student ID</string>
-    <string name="helper_student_id">This is your password, for example s12345678</string>
+    <string name="helper_student_id">Numbers only, without the s. For example 12345678</string>
+    <string name="hint_first_name">First name</string>
+    <string name="helper_first_name">This is your password. Capital letters matter.</string>
     <string name="action_sign_in">Sign in</string>
 
     <!-- Dashboard screen -->
@@ -35,12 +36,12 @@
     <string name="description_not_provided">No description has been provided for this item.</string>
 
     <!-- Form validation messages -->
-    <string name="error_username_required">Please enter your first name</string>
-    <string name="error_password_required">Please enter your student ID</string>
-    <string name="error_password_format">Your student ID should be a lowercase s followed by numbers, for example s12345678</string>
+    <string name="error_username_required">Please enter your student ID</string>
+    <string name="error_username_format">Enter your student ID as numbers only, without the s. For example 12345678</string>
+    <string name="error_password_required">Please enter your first name</string>
 
     <!-- Network error messages -->
-    <string name="error_invalid_credentials">Sign in failed. Please check your first name and student ID and try again.</string>
+    <string name="error_invalid_credentials">Sign in failed. Please check your student ID and first name (capital letters matter) and try again.</string>
     <string name="error_not_found">We couldn\'t find any data for your topic.</string>
     <string name="error_timeout">The server took too long to respond. It may be waking up, so please try again in a moment.</string>
     <string name="error_no_connection">We couldn\'t reach the server. Please check your internet connection and try again.</string>

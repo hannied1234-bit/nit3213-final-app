@@ -47,6 +47,8 @@ class LoginViewModel @Inject constructor(
         // Stray spaces are a common typing mistake on mobile keyboards.
         // Autocomplete often adds a space after a word, and the API would
         // reject "Adam " even though the user typed their name correctly.
+        // Only spaces are removed. The first name is case sensitive on the
+        // server, so its capital letters are sent exactly as typed.
         val trimmedUsername = username.trim()
         val trimmedPassword = password.trim()
 
@@ -94,7 +96,7 @@ class LoginViewModel @Inject constructor(
     }
 
     /**
-     * Clears the first name error as soon as the user starts fixing it.
+     * Clears the student ID error as soon as the user starts fixing it.
      * The server error is cleared too, because the user is changing the very
      * thing it complained about.
      */
@@ -102,7 +104,7 @@ class LoginViewModel @Inject constructor(
         _uiState.update { it.copy(usernameError = null, loginError = null) }
     }
 
-    /** Clears the student ID error as soon as the user starts fixing it. */
+    /** Clears the first name error as soon as the user starts fixing it. */
     fun onPasswordChanged() {
         _uiState.update { it.copy(passwordError = null, loginError = null) }
     }
@@ -118,24 +120,30 @@ class LoginViewModel @Inject constructor(
     // Each validator returns a message ID for a problem, or null when the input
     // is fine. Returning the ID means the caller can drop it straight into the
     // state without any more checks.
+    // The username is the student ID. Checked in order: a blank field gets
+    // "required" instead of a format error, which would be confusing for an
+    // empty box.
     @StringRes
-    private fun validateUsername(username: String): Int? =
-        if (username.isEmpty()) R.string.error_username_required else null
-
-    // Checked in order. A blank field gets "required" instead of a format
-    // error, which would be confusing for an empty box.
-    @StringRes
-    private fun validatePassword(password: String): Int? = when {
-        password.isEmpty() -> R.string.error_password_required
-        !STUDENT_ID_PATTERN.matches(password) -> R.string.error_password_format
+    private fun validateUsername(username: String): Int? = when {
+        username.isEmpty() -> R.string.error_username_required
+        !STUDENT_ID_PATTERN.matches(username) -> R.string.error_username_format
         else -> null
     }
 
+    // The password is the first name. Only emptiness is checked. Names come in
+    // too many forms (hyphens, apostrophes, accents) for a pattern to be fair,
+    // so the server decides whether it's correct.
+    @StringRes
+    private fun validatePassword(password: String): Int? =
+        if (password.isEmpty()) R.string.error_password_required else null
+
     private companion object {
-        // A lowercase "s" followed by digits, for example s12345678.
-        // ^ and $ anchor the pattern to the whole string, so "s123abc" or
-        // "xs123" fail. matches() needs a full match anyway, but the anchors
-        // make the intent obvious to a reader.
-        val STUDENT_ID_PATTERN = Regex("^s\\d+$")
+        // Digits only, for example 12345678. The spec says the ID is sent
+        // without the "s" printed on student cards, so "s12345678" fails here
+        // with a message telling the user to drop the "s".
+        // ^ and $ anchor the pattern to the whole string, so "123abc" fails.
+        // matches() needs a full match anyway, but the anchors make the intent
+        // obvious to a reader.
+        val STUDENT_ID_PATTERN = Regex("^\\d+$")
     }
 }

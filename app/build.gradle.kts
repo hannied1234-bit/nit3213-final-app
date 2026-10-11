@@ -42,7 +42,10 @@ android {
         // hard-coded throughout the Kotlin code.
         // The escaped quotes are needed because the value is pasted into
         // generated Java source as written, so it has to be a valid string literal.
-        buildConfigField("String", "BASE_URL", "\"https://nit3213api.onrender.com/\"")
+        // The spec gives the base URL without a trailing slash, but Retrofit
+        // refuses a base URL that doesn't end in "/", so one is added here.
+        buildConfigField("String", "BASE_URL", "\"https://nit3213apinew.onrender.com/\"")
+        // The campus part of the auth path: "footscray", "sydney" or "br".
         buildConfigField("String", "CAMPUS_LOCATION", "\"footscray\"")
     }
 

@@ -43,7 +43,7 @@ class AuthRepositoryImplTest {
         // login() is a suspend function.
         coEvery { apiService.login(any(), any()) } returns LoginResponse(keypass = "animals")
 
-        val result = repository.login(username = "Adam", password = "s12345678")
+        val result = repository.login(username = "12345678", password = "Adam")
 
         assertEquals(DataResult.Success("animals"), result)
     }
@@ -54,22 +54,24 @@ class AuthRepositoryImplTest {
     fun `login posts the credentials to the campus endpoint`() = runTest {
         coEvery { apiService.login(any(), any()) } returns LoginResponse(keypass = "animals")
 
-        repository.login(username = "Adam", password = "s12345678")
+        repository.login(username = "12345678", password = "Adam")
 
         // LoginRequest is a data class, so MockK compares it by value.
         coVerify {
             apiService.login(
                 location = CAMPUS,
-                request = LoginRequest(username = "Adam", password = "s12345678")
+                request = LoginRequest(username = "12345678", password = "Adam")
             )
         }
     }
 
+    // "adam" in lowercase stands for the most likely real mistake. The first
+    // name is case sensitive, so the server rejects it.
     @Test
     fun `401 response means invalid credentials`() = runTest {
         coEvery { apiService.login(any(), any()) } throws httpException(401)
 
-        val result = repository.login(username = "Adam", password = "s00000000")
+        val result = repository.login(username = "12345678", password = "adam")
 
         assertEquals(DataResult.Error(DataError.INVALID_CREDENTIALS), result)
     }
@@ -80,7 +82,7 @@ class AuthRepositoryImplTest {
     fun `400 response also means invalid credentials`() = runTest {
         coEvery { apiService.login(any(), any()) } throws httpException(400)
 
-        val result = repository.login(username = "Adam", password = "s00000000")
+        val result = repository.login(username = "12345678", password = "adam")
 
         assertEquals(DataResult.Error(DataError.INVALID_CREDENTIALS), result)
     }
@@ -89,7 +91,7 @@ class AuthRepositoryImplTest {
     fun `500 response means a server error`() = runTest {
         coEvery { apiService.login(any(), any()) } throws httpException(500)
 
-        val result = repository.login(username = "Adam", password = "s12345678")
+        val result = repository.login(username = "12345678", password = "Adam")
 
         assertEquals(DataResult.Error(DataError.SERVER), result)
     }
@@ -98,7 +100,7 @@ class AuthRepositoryImplTest {
     fun `no internet means no connection`() = runTest {
         coEvery { apiService.login(any(), any()) } throws IOException("offline")
 
-        val result = repository.login(username = "Adam", password = "s12345678")
+        val result = repository.login(username = "12345678", password = "Adam")
 
         assertEquals(DataResult.Error(DataError.NO_CONNECTION), result)
     }
@@ -109,7 +111,7 @@ class AuthRepositoryImplTest {
     fun `slow server means a timeout`() = runTest {
         coEvery { apiService.login(any(), any()) } throws SocketTimeoutException("timeout")
 
-        val result = repository.login(username = "Adam", password = "s12345678")
+        val result = repository.login(username = "12345678", password = "Adam")
 
         assertEquals(DataResult.Error(DataError.TIMEOUT), result)
     }

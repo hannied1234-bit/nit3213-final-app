@@ -8,7 +8,7 @@ Topic Explorer is an Android app that signs in to the `vu-nit3213-api`, then lis
 
 | Screen | What it does |
 | --- | --- |
-| **Login** | First name and student ID fields. Checks both fields before sending anything, then makes a `POST` request to `/footscray/auth`. Shows clear messages for wrong credentials, no internet, timeouts and server errors. On success it moves to the Dashboard and removes Login from the back stack. |
+| **Login** | Student ID (username) and first name (password) fields. Checks both fields before sending anything, then makes a `POST` request to `/footscray/auth`. Shows clear messages for wrong credentials, no internet, timeouts and server errors. On success it moves to the Dashboard and removes Login from the back stack. |
 | **Dashboard** | Uses the `keypass` from the login response to call `GET /dashboard/{keypass}`. Shows the entities in a `RecyclerView`, each as a card summarising every field except the description. Includes loading, empty and error states, a "Try again" button and a "Log out" option in the toolbar. |
 | **Details** | Shows every field of the selected entity plus its full description, laid out in cards. The toolbar's back arrow returns to the list. |
 
@@ -48,8 +48,8 @@ On Windows, use `gradlew.bat` in place of `./gradlew`.
 
 | Field | What to enter | Example |
 | --- | --- | --- |
-| First name | Your first name | `Adam` |
-| Student ID | Your student ID, starting with a lowercase `s` | `s12345678` |
+| Username | Your student ID, numbers only, **without** the `s` | `12345678` |
+| Password | Your first name. It's case sensitive, so match the capital letters | `Adam` |
 
 The API is hosted on Render's free tier, which puts the server to sleep when nobody is using it. **The first sign in can take up to a minute** while it wakes up. The app waits for 60 seconds; if it still times out, tap Sign in again.
 
@@ -149,11 +149,13 @@ Because every class receives its dependencies through its constructor, the unit 
 The API address and campus are set in `app/build.gradle.kts` and compiled into `BuildConfig`:
 
 ```kotlin
-buildConfigField("String", "BASE_URL", "\"https://nit3213api.onrender.com/\"")
+buildConfigField("String", "BASE_URL", "\"https://nit3213apinew.onrender.com/\"")
 buildConfigField("String", "CAMPUS_LOCATION", "\"footscray\"")
 ```
 
-To use a different class location, change `footscray` to `sydney` or `ort`.
+To use a different class location, change `footscray` to `sydney` or `br`.
+
+The spec gives the base URL as `https://nit3213apinew.onrender.com` with no trailing slash. The app adds one because Retrofit requires a base URL to end in `/`.
 
 ## Libraries
 
@@ -178,4 +180,5 @@ All versions are kept in one place: `gradle/libs.versions.toml`.
 - **Gradle sync fails with a Java version error** (for example "Unsupported class file major version"): open **Settings > Build, Execution, Deployment > Build Tools > Gradle** and set **Gradle JDK** to a JDK 17 or 21, then sync again.
 - **"SDK location not found"**: open the project in Android Studio once so it creates `local.properties` with your SDK path.
 - **Sign in times out the first time**: the server was asleep. Wait a moment and try again.
+- **"Sign in failed" with the right details**: check the capital letters in your first name, and make sure the student ID has no `s` in front.
 - **Want to see the raw JSON for your topic?** Debug builds log every request and response. In Logcat, filter by `okhttp`.

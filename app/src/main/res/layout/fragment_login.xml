@@ -59,29 +59,34 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="@dimen/spacing_extra_large"
-            android:hint="@string/hint_first_name"
+            android:hint="@string/hint_student_id"
+            app:helperText="@string/helper_student_id"
             app:startIconDrawable="@drawable/ic_person">
 
+            <!-- Username is the student ID, digits only, so the number
+                 keyboard opens. -->
             <com.google.android.material.textfield.TextInputEditText
                 android:id="@+id/usernameEditText"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:autofillHints="personGivenName"
+                android:autofillHints="username"
                 android:imeOptions="actionNext"
-                android:inputType="textPersonName|textCapWords"
+                android:inputType="number"
                 android:maxLines="1" />
 
         </com.google.android.material.textfield.TextInputLayout>
 
+        <!-- Password is the first name. It's case sensitive, so the helper
+             text warns about capital letters. -->
         <com.google.android.material.textfield.TextInputLayout
             android:id="@+id/passwordInputLayout"
             style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="@dimen/spacing_medium"
-            android:hint="@string/hint_student_id"
+            android:hint="@string/hint_first_name"
             app:endIconMode="password_toggle"
-            app:helperText="@string/helper_student_id"
+            app:helperText="@string/helper_first_name"
             app:startIconDrawable="@drawable/ic_lock">
 
             <com.google.android.material.textfield.TextInputEditText

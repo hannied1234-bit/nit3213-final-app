@@ -23,8 +23,8 @@ interface AuthRepository {
      * launches it in a coroutine and gets the result back without blocking the
      * main thread.
      *
-     * @param username the student's first name.
-     * @param password the student ID, for example "s12345678".
+     * @param username the student ID without the leading "s", for example "12345678".
+     * @param password the student's first name. It's case sensitive.
      * @return the keypass on success, which the dashboard endpoint needs to
      * return the student's data.
      */

@@ -40,11 +40,12 @@ class AuthRepositoryImpl @Inject constructor(
 }
 
 /**
- * For the login endpoint, any 4xx reply (such as 400, 401 or 404) means the first
- * name and student ID were not accepted, so the user is told to check them.
+ * For the login endpoint, any 4xx reply (such as 400, 401 or 404) means the
+ * student ID and first name were not accepted, so the user is told to check them.
  *
  * The default rule in safeApiCall would call a 404 "not found", which would
- * confuse someone who just mistyped their student ID. This rule replaces it for
+ * confuse someone who just mistyped their student ID or used the wrong
+ * capitalisation in their first name. This rule replaces it for
  * login only. It's private to the file because nothing else should use it.
  */
 private fun mapLoginHttpError(code: Int): DataError = when (code) {
