@@ -1,18 +1,33 @@
+// Says which folder (package) this file belongs to.
 package com.vu.nit3213app.ui.login
 
+// Bundle: a box of saved values Android passes to screens.
 import android.os.Bundle
+// View: the base class for everything you see on screen.
 import android.view.View
+// EditorInfo: holds the IDs of keyboard buttons, such as "Done".
 import android.view.inputmethod.EditorInfo
+// WindowCompat: gives access to the window, used here to hide the keyboard.
 import androidx.core.view.WindowCompat
+// WindowInsetsCompat: describes system areas such as the keyboard.
 import androidx.core.view.WindowInsetsCompat
+// isVisible: a shortcut for showing or hiding a view with true or false.
 import androidx.core.view.isVisible
+// doAfterTextChanged: runs code every time the text in a field changes.
 import androidx.core.widget.doAfterTextChanged
+// Fragment: the base class for a screen inside the Activity.
 import androidx.fragment.app.Fragment
+// viewModels: the "by viewModels()" helper that creates the ViewModel.
 import androidx.fragment.app.viewModels
+// findNavController: finds the object that moves between screens.
 import androidx.navigation.fragment.findNavController
+// R: the generated list of IDs for layouts, strings and images.
 import com.vu.nit3213app.R
+// FragmentLoginBinding: generated from fragment_login.xml, holds every view on this screen.
 import com.vu.nit3213app.databinding.FragmentLoginBinding
+// collectWhenStarted: our helper that watches the ViewModel's state.
 import com.vu.nit3213app.ui.common.collectWhenStarted
+// AndroidEntryPoint: the Hilt label that lets Hilt inject into this class.
 import dagger.hilt.android.AndroidEntryPoint
 
 /**
@@ -27,52 +42,61 @@ import dagger.hilt.android.AndroidEntryPoint
  *
  * @AndroidEntryPoint lets Hilt supply this Fragment's ViewModel.
  */
+// Tells Hilt it's allowed to deliver things (the ViewModel) to this screen.
 @AndroidEntryPoint
+// Creates the Login screen class. Passing the layout ID makes Fragment build the screen from fragment_login.xml.
 class LoginFragment : Fragment(R.layout.fragment_login) {
 
-    // "by viewModels()" keeps the same ViewModel across screen rotations.
-    // A request that's halfway through when the phone turns keeps running, and
-    // the rebuilt screen picks up its result.
+    // Gets this screen's ViewModel. Hilt builds it and gives it an AuthRepository.
+    // Why: "by viewModels()" keeps the same ViewModel when the phone rotates,
+    // so a sign in that's halfway through isn't lost.
     private val viewModel: LoginViewModel by viewModels()
 
-    // The binding only exists between onViewCreated and onDestroyView. Holding it
-    // in a nullable field and clearing it in onDestroyView avoids a memory leak.
+    // Holds the views of this screen. It starts as null because the views don't exist yet.
+    // Why nullable: the views only exist between onViewCreated and onDestroyView.
     private var _binding: FragmentLoginBinding? = null
+    // A shortcut that returns _binding without the null check (the !! part).
+    // Why: saves writing _binding!! everywhere. It crashes if used after the views are gone.
     private val binding get() = _binding!!
 
+    // Android calls this function once the screen's views have been built.
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        // Lets the parent Fragment class do its own set-up first.
         super.onViewCreated(view, savedInstanceState)
+        // Connects the binding to the views that were just built.
         _binding = FragmentLoginBinding.bind(view)
 
+        // Hooks up the button, the keyboard and the text fields (see the function below).
         setUpListeners()
-        // Called after the listeners are set, so the first render already has
-        // working buttons. A StateFlow sends its current value right away, so
-        // after a rotation any error or spinner reappears immediately.
+        // Starts watching the ViewModel's state. Every time it changes, render() redraws the screen.
+        // Why after the listeners: so the buttons already work when the first state is drawn.
         collectWhenStarted(viewModel.uiState, ::render)
     }
 
     /** Connects the buttons, keyboard and text fields to the ViewModel. */
     private fun setUpListeners() {
+        // When the Sign in button is tapped, run submitLogin().
         binding.signInButton.setOnClickListener { submitLogin() }
 
-        // Lets the user sign in straight from the keyboard's Done key.
-        // The Done key comes from android:imeOptions="actionDone" on this field
-        // in fragment_login.xml. Returning true says the key was handled, so the
-        // keyboard doesn't also run its default action.
+        // Listens for keyboard buttons pressed while typing in the first name (password) field.
         binding.passwordEditText.setOnEditorActionListener { _, actionId, _ ->
+            // Checks whether the button pressed was "Done".
             if (actionId == EditorInfo.IME_ACTION_DONE) {
+                // It was Done, so sign in, the same as tapping the button.
                 submitLogin()
+                // Returns true to say "handled", so the keyboard doesn't also do its default action.
                 true
+            // Any other keyboard button.
             } else {
+                // Returns false to say "not handled", so the keyboard does its normal thing.
                 false
             }
         }
 
-        // Clears a field's error as soon as the user starts correcting it.
-        // Leaving the red message up while they type would suggest the new
-        // text is wrong too. The ViewModel decides what to clear, which keeps
-        // that rule testable.
+        // Every time the student ID text changes, tell the ViewModel.
+        // Why: the ViewModel then clears the red error under that field while the user fixes it.
         binding.usernameEditText.doAfterTextChanged { viewModel.onUsernameChanged() }
+        // Every time the first name text changes, tell the ViewModel, which clears that field's error.
         binding.passwordEditText.doAfterTextChanged { viewModel.onPasswordChanged() }
     }
 
@@ -81,13 +105,14 @@ class LoginFragment : Fragment(R.layout.fragment_login) {
      * validates them, so the raw text is passed exactly as typed.
      */
     private fun submitLogin() {
-        // Hiding the keyboard first means any error message below the fields
-        // isn't covered by it.
+        // Hides the on-screen keyboard.
+        // Why: so it doesn't cover any error message that appears under the fields.
         hideKeyboard()
-        // text is nullable on an EditText, so orEmpty() turns a null into "".
-        // The ViewModel then reports it as a missing field.
+        // Sends what the user typed to the ViewModel, which checks it and signs in.
         viewModel.login(
+            // Reads the student ID field as text. orEmpty() turns a missing value into "".
             username = binding.usernameEditText.text?.toString().orEmpty(),
+            // Reads the first name field as text, the same way.
             password = binding.passwordEditText.text?.toString().orEmpty()
         )
     }
@@ -99,26 +124,27 @@ class LoginFragment : Fragment(R.layout.fragment_login) {
      * exactly and nothing from an earlier state is left behind.
      */
     private fun render(state: LoginUiState) {
-        // Setting a TextInputLayout's error to null removes the message and
-        // the red outline, so a null in the state clears the error.
+        // Shows the student ID error under that field, or removes it when the state has none (null).
         binding.usernameInputLayout.error = state.usernameError?.let { getString(it) }
+        // Shows the first name error under that field, or removes it when there's none.
         binding.passwordInputLayout.error = state.passwordError?.let { getString(it) }
 
-        // The banner under the fields is for errors from the server, such as
-        // wrong credentials or no internet. Field problems stay on the fields.
+        // Shows the red error box only when the server sent back an error.
         binding.loginErrorText.isVisible = state.loginError != null
+        // If there's a server error, puts its message text into the red box.
         state.loginError?.let { binding.loginErrorText.setText(it) }
 
-        // While a request is running, the inputs are disabled too. Editing the
-        // fields mid-request would make the result look like it belonged to
-        // the new text. The ViewModel ignores extra taps as well, so this is
-        // mainly for the user's benefit.
+        // Shows the spinning circle while signing in, and hides it otherwise.
         binding.signInProgress.isVisible = state.isLoading
+        // Greys out the Sign in button while signing in. The ! means "not", so loading = not enabled.
         binding.signInButton.isEnabled = !state.isLoading
+        // Locks the student ID field while signing in.
+        // Why: editing mid-request would make the result look like it belonged to the new text.
         binding.usernameEditText.isEnabled = !state.isLoading
+        // Locks the first name field while signing in, for the same reason.
         binding.passwordEditText.isEnabled = !state.isLoading
 
-        // A keypass in the state means login worked and it's time to move on.
+        // If login worked, the state holds a keypass, so go to the Dashboard with it.
         state.keypass?.let { keypass -> navigateToDashboard(keypass) }
     }
 
@@ -130,14 +156,15 @@ class LoginFragment : Fragment(R.layout.fragment_login) {
      * and jump to the Dashboard a second time.
      */
     private fun navigateToDashboard(keypass: String) {
-        // Clears the keypass first, so a later redraw of this screen can't
-        // trigger the move again.
+        // Tells the ViewModel to clear the keypass from the state.
+        // Why first: so a later redraw of this screen can't trigger the move a second time.
         viewModel.onNavigatedToDashboard()
-        // Safe Args generated LoginFragmentDirections from nav_graph.xml, so the
-        // keypass argument is checked by the compiler rather than at runtime.
+        // Builds the "go to Dashboard" action with the keypass attached.
+        // Why Safe Args: LoginFragmentDirections is generated from nav_graph.xml,
+        // so the compiler checks the keypass is passed correctly.
         val action = LoginFragmentDirections.actionLoginFragmentToDashboardFragment(keypass)
-        // The action pops Login off the back stack (popUpToInclusive in
-        // nav_graph.xml), so Back on the Dashboard leaves the app.
+        // Performs the move to the Dashboard.
+        // Why Back then exits: nav_graph.xml removes Login from the history (popUpToInclusive).
         findNavController().navigate(action)
     }
 
@@ -149,12 +176,18 @@ class LoginFragment : Fragment(R.layout.fragment_login) {
      * window and any view inside it.
      */
     private fun hideKeyboard() {
+        // Gets the window's controller for system areas (keyboard, status bar)...
         WindowCompat.getInsetsController(requireActivity().window, requireView())
+            // ...and tells it to hide the keyboard (ime means input method, the keyboard).
             .hide(WindowInsetsCompat.Type.ime())
     }
 
+    // Android calls this when the screen's views are destroyed, for example when leaving the screen.
     override fun onDestroyView() {
+        // Lets the parent Fragment class do its own clean-up first.
         super.onDestroyView()
+        // Forgets the views so they can be removed from memory.
+        // Why: holding them after they're gone is a memory leak.
         _binding = null
     }
 }
