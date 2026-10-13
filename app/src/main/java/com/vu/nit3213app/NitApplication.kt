@@ -1,6 +1,9 @@
+// Says which folder (package) this file belongs to.
 package com.vu.nit3213app
 
+// Application: the Android class that represents the whole running app.
 import android.app.Application
+// HiltAndroidApp: the Hilt label that switches Hilt on for the app.
 import dagger.hilt.android.HiltAndroidApp
 
 /**
@@ -15,10 +18,9 @@ import dagger.hilt.android.HiltAndroidApp
  * as long as the process does. That's why the singleton container is attached
  * here. Objects marked @Singleton, such as the OkHttpClient and Retrofit, are
  * built once and then shared by every screen until the app is closed.
- *
- * The class body is empty on purpose. Hilt generates a parent class at compile
- * time (Hilt_NitApplication) that does the set-up work, so nothing needs to be
- * written by hand.
  */
+// Switches Hilt on. Hilt creates its container of shared objects when the app starts.
+// Why here: this class is created first and lives as long as the app does.
 @HiltAndroidApp
+// Creates the app's Application class. The body is empty because Hilt generates the set-up code.
 class NitApplication : Application()

@@ -1,5 +1,7 @@
+// Says which folder (package) this file belongs to.
 package com.vu.nit3213app.domain.repository
 
+// DataResult: our "worked or failed" result type.
 import com.vu.nit3213app.domain.model.DataResult
 
 /**
@@ -9,24 +11,16 @@ import com.vu.nit3213app.domain.model.DataResult
  * LoginViewModel depends only on "something that can log in". Hilt supplies the
  * real network version in the app, and the unit tests supply a MockK fake. This is
  * the Dependency Inversion Principle from Lecture 4.
- *
- * The interface sits in the domain layer and the implementation sits in the
- * data layer. The data layer depends on the domain layer, never the reverse, so
- * nothing in this package imports Retrofit, Moshi or OkHttp.
  */
+// Creates the interface: a promise that something can log in, without saying how.
 interface AuthRepository {
 
     /**
-     * Sends the user's credentials to the campus auth endpoint.
-     *
-     * It's a suspend function because it waits on the network. The caller
-     * launches it in a coroutine and gets the result back without blocking the
-     * main thread.
-     *
      * @param username the student ID without the leading "s", for example "12345678".
      * @param password the student's first name. It's case sensitive.
-     * @return the keypass on success, which the dashboard endpoint needs to
-     * return the student's data.
+     * @return the keypass on success, which the dashboard endpoint needs.
      */
+    // The login function. "suspend" means it waits for the server without freezing the app.
+    // Returns Success with the keypass, or Error with the kind of problem.
     suspend fun login(username: String, password: String): DataResult<String>
 }

@@ -1,18 +1,17 @@
+// Says which folder (package) this file belongs to.
 package com.vu.nit3213app.domain.model
 
 /**
  * Everything the Dashboard screen needs from the dashboard endpoint.
  *
- * This is the domain version of DashboardResponse. The response holds raw maps
+ * This is the tidy version of DashboardResponse. The response holds raw maps
  * straight from the JSON. This class holds finished [Entity] objects, so the
- * ViewModel and the UI never deal with raw JSON.
- *
- * @property entities the items to show in the list.
- * @property total the "entityTotal" value reported by the API. It's shown as
- * the count above the list. The API's own number is used instead of
- * entities.size so the screen reports exactly what the server says.
+ * ViewModel and the screen never deal with raw JSON.
  */
+// Creates a data class that holds the dashboard's results.
 data class DashboardData(
+    // The tidy items to show in the list.
     val entities: List<Entity>,
+    // The total number of items, as reported by the server. Shown above the list.
     val total: Int
 )

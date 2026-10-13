@@ -1,17 +1,31 @@
+// Says which folder (package) this file belongs to.
 package com.vu.nit3213app
 
+// Bundle: a box of saved values Android passes to screens.
 import android.os.Bundle
+// enableEdgeToEdge: lets the app draw behind the status bar and bottom bar.
 import androidx.activity.enableEdgeToEdge
+// AppCompatActivity: the base class for an Activity with a toolbar.
 import androidx.appcompat.app.AppCompatActivity
+// ViewCompat: helper for listening to system area sizes (insets).
 import androidx.core.view.ViewCompat
+// WindowInsetsCompat: describes system areas such as the status bar and keyboard.
 import androidx.core.view.WindowInsetsCompat
+// updatePadding: a shortcut for changing only some sides of a view's padding.
 import androidx.core.view.updatePadding
+// NavController: the object that moves between screens.
 import androidx.navigation.NavController
+// NavHostFragment: the container that swaps the screens in and out.
 import androidx.navigation.fragment.NavHostFragment
+// AppBarConfiguration: says which screens are "top level" (no back arrow).
 import androidx.navigation.ui.AppBarConfiguration
+// navigateUp: handles the toolbar's back arrow.
 import androidx.navigation.ui.navigateUp
+// setupActionBarWithNavController: links the toolbar to the screen changes.
 import androidx.navigation.ui.setupActionBarWithNavController
+// ActivityMainBinding: generated from activity_main.xml, holds the toolbar and screen container.
 import com.vu.nit3213app.databinding.ActivityMainBinding
+// AndroidEntryPoint: the Hilt label that lets Hilt inject into this class.
 import dagger.hilt.android.AndroidEntryPoint
 
 /**
@@ -23,45 +37,39 @@ import dagger.hilt.android.AndroidEntryPoint
  * Fragment transaction handled by the NavController. That's cheaper than starting
  * a new Activity, and it lets one toolbar stay on screen the whole time while
  * only the content underneath changes.
- *
- * @AndroidEntryPoint is required here because the Fragments it hosts use Hilt.
- * Hilt can only inject into a Fragment if the Activity holding it is also an
- * entry point, so leaving this off would crash the app the moment LoginFragment
- * asked for its ViewModel.
  */
+// Lets Hilt work here.
+// Why: Hilt can only inject into a Fragment if the Activity holding it is also marked.
 @AndroidEntryPoint
+// Creates the main Activity class, the one window that holds every screen.
 class MainActivity : AppCompatActivity() {
 
-    // lateinit because these can't be created until onCreate runs. The view
-    // binding needs a LayoutInflater, and the NavController only exists once the
-    // layout holding the NavHostFragment has been inflated.
+    // Will hold the views from activity_main.xml. "lateinit" means it's set later, in onCreate.
     private lateinit var binding: ActivityMainBinding
+    // Will hold the object that moves between screens. Also set in onCreate.
     private lateinit var navController: NavController
-
-    // Kept as a field because onSupportNavigateUp() needs the same configuration
-    // that was given to the toolbar in setUpNavigation().
+    // Will hold the list of top-level screens.
+    // Why a field: onSupportNavigateUp() needs the same one later.
     private lateinit var appBarConfiguration: AppBarConfiguration
 
+    // Android calls this once when the Activity is created.
     override fun onCreate(savedInstanceState: Bundle?) {
-        // Draws the app behind the status and navigation bars. The insets
-        // listener below then adds padding so nothing is hidden behind them.
-        // It's called before super.onCreate() so the window flags are set before
-        // any view is attached to the window.
+        // Lets the app draw behind the status bar and bottom bar.
+        // Why before super: the window settings must be set before anything is drawn.
         enableEdgeToEdge()
+        // Lets the parent Activity class do its own set-up.
         super.onCreate(savedInstanceState)
 
-        // ViewBinding builds every view in activity_main.xml and hands back a
-        // typed object, so binding.toolbar is a MaterialToolbar with no casting
-        // and no chance of a null from a mistyped ID.
+        // Builds the views from activity_main.xml and keeps them in binding.
         binding = ActivityMainBinding.inflate(layoutInflater)
+        // Puts those views on the screen.
         setContentView(binding.root)
-
-        // Makes the MaterialToolbar act as this Activity's action bar. The theme
-        // has no built-in action bar, so without this call the toolbar would be
-        // a plain view that never shows screen titles or the up arrow.
+        // Makes our MaterialToolbar act as the app's top bar, so it shows titles and the back arrow.
         setSupportActionBar(binding.toolbar)
 
+        // Adds padding so nothing hides behind the status bar or keyboard (see below).
         applyWindowInsets()
+        // Connects the toolbar to the screen changes (see below).
         setUpNavigation()
     }
 
@@ -70,74 +78,67 @@ class MainActivity : AppCompatActivity() {
      * and up arrow update by themselves whenever the current screen changes.
      */
     private fun setUpNavigation() {
-        // The NavHostFragment is declared in XML with a FragmentContainerView.
-        // findNavController() from an Activity can fail in onCreate with that
-        // setup, so the NavController is read straight from the host Fragment.
+        // Finds the screen container declared in activity_main.xml.
         val navHostFragment =
+            // Looks it up by ID, then treats it as a NavHostFragment.
             supportFragmentManager.findFragmentById(R.id.nav_host_fragment) as NavHostFragment
+        // Gets the object that moves between screens from that container.
         navController = navHostFragment.navController
 
-        // Login and Dashboard are "top level" screens, so they show no back arrow.
-        // Details is not, so the toolbar shows an up arrow that returns to the list.
-        // Without this set, the Dashboard would show an up arrow pointing back to
-        // Login, which makes no sense once the user has signed in.
+        // Lists the screens that are "top level", so they get no back arrow.
+        // Why: after signing in, a back arrow on the Dashboard pointing to Login makes no sense.
         appBarConfiguration = AppBarConfiguration(
+            // Login and Dashboard are top level. Details isn't, so it gets the back arrow.
             setOf(R.id.loginFragment, R.id.dashboardFragment)
         )
-
-        // From here on the toolbar title comes from each destination's
-        // android:label in nav_graph.xml, so no Fragment has to set it by hand.
+        // Links the toolbar to the screen changes. Titles now come from nav_graph.xml.
         setupActionBarWithNavController(navController, appBarConfiguration)
     }
 
     /**
      * Makes the toolbar's up arrow go back through the navigation graph.
-     *
-     * The NavController gets the first chance to handle the tap. It returns
-     * false only when there's nothing left to pop, and the call then falls back
-     * to the default Activity behaviour.
      */
+    // Runs when the toolbar's back arrow is tapped. Goes back one screen, or does the default if it can't.
     override fun onSupportNavigateUp(): Boolean =
+        // The || means "or": try the NavController first, and if it can't go back, use the default.
         navController.navigateUp(appBarConfiguration) || super.onSupportNavigateUp()
 
     /**
      * Pads the toolbar below the status bar, and pads the screen content above the
      * navigation bar or the on-screen keyboard, whichever is taller. This stops
      * the keyboard covering the Sign in button.
-     *
-     * Edge-to-edge is the default on Android 15, so this padding is what keeps
-     * the toolbar from sliding under the clock and battery icons.
      */
     private fun applyWindowInsets() {
-        // The listener runs every time the insets change, for example when the
-        // keyboard opens or closes or the phone is rotated.
+        // Listens for changes in system area sizes, such as the keyboard opening or the phone rotating.
         ViewCompat.setOnApplyWindowInsetsListener(binding.root) { _, insets ->
-            // displayCutout is included so content also stays clear of a camera
-            // notch when the phone is held sideways.
+            // Measures the status bar, bottom bar and camera notch.
             val systemBars = insets.getInsets(
+                // The "or" combines them, so all three are measured together.
                 WindowInsetsCompat.Type.systemBars() or WindowInsetsCompat.Type.displayCutout()
             )
+            // Measures the keyboard. Its height is 0 when it's closed.
             val keyboard = insets.getInsets(WindowInsetsCompat.Type.ime())
 
-            // The toolbar only needs top and side padding. Its bottom edge sits
-            // against the content, not against a system bar.
+            // Pads the toolbar so it sits below the status bar.
             binding.appBarLayout.updatePadding(
+                // Left padding clears a notch when the phone is sideways.
                 left = systemBars.left,
+                // Top padding pushes the toolbar below the clock and battery icons.
                 top = systemBars.top,
+                // Right padding clears a notch on the other side.
                 right = systemBars.right
             )
-
-            // When the keyboard is open it's taller than the navigation bar, so
-            // maxOf picks it. Closed, its inset is 0 and the navigation bar wins.
+            // Pads the screen area so its content stays clear of the edges.
             binding.navHostFragment.updatePadding(
+                // Left side, for a notch.
                 left = systemBars.left,
+                // Right side, for a notch.
                 right = systemBars.right,
+                // Bottom: whichever is taller, the bottom bar or the keyboard.
+                // Why: so the keyboard never covers the Sign in button.
                 bottom = maxOf(systemBars.bottom, keyboard.bottom)
             )
-
-            // CONSUMED stops the insets reaching the child views. The padding
-            // has already been applied here, and letting a child pad itself
-            // again would leave a double gap.
+            // Says the insets are dealt with, so child views don't add the padding a second time.
             WindowInsetsCompat.CONSUMED
         }
     }

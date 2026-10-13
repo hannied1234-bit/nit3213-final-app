@@ -1,56 +1,61 @@
+// Says which folder (package) this file belongs to.
 package com.vu.nit3213app.data.remote
 
+// DashboardResponse: the shape of the JSON the dashboard endpoint sends back.
 import com.vu.nit3213app.data.remote.dto.DashboardResponse
+// LoginRequest: the shape of the JSON we send to log in.
 import com.vu.nit3213app.data.remote.dto.LoginRequest
+// LoginResponse: the shape of the JSON the login endpoint sends back.
 import com.vu.nit3213app.data.remote.dto.LoginResponse
+// Body: marks which value is sent as the request's JSON body.
 import retrofit2.http.Body
+// GET: marks a request that fetches data.
 import retrofit2.http.GET
+// POST: marks a request that sends data.
 import retrofit2.http.POST
+// Path: marks a value that's slotted into the URL.
 import retrofit2.http.Path
 
 /**
  * Retrofit description of the vu-nit3213-api endpoints.
  *
- * Retrofit reads these annotations and generates the code that builds each HTTP
- * request. The functions are "suspend" so they run inside a coroutine without
- * blocking the main thread. Paths have no leading slash so they are added to the
- * end of the base URL (https://nit3213apinew.onrender.com/).
- *
  * There's no class that implements this interface anywhere in the project.
- * NetworkModule calls retrofit.create(), which builds an implementation at
- * runtime. Calling login() then sends the request, waits for the reply and uses
- * Moshi to turn the JSON into the return type.
+ * NetworkModule calls retrofit.create(), which builds one while the app runs.
+ * Calling login() then sends the request, waits for the reply and uses Moshi to
+ * turn the JSON into the return type.
  *
- * A suspend function here returns the parsed body directly. If the server
- * replies with a non-2xx status, Retrofit throws an HttpException, and
- * safeApiCall turns that into a DataError.
+ * If the server replies with an error status, Retrofit throws an HttpException,
+ * and safeApiCall turns that into a DataError.
  */
+// Describes the server's endpoints. Retrofit reads this and writes the real code for us.
 interface NitApiService {
 
     /**
      * POST /{location}/auth, for example POST /footscray/auth.
-     *
-     * The campus is a path parameter rather than being typed into the URL, so the
-     * same code works for the Sydney (/sydney/auth) and BR (/br/auth) classes too.
-     * Only CAMPUS_LOCATION in app/build.gradle.kts needs to change.
-     *
-     * @Body tells Retrofit to send [request] as the JSON body, using the Moshi
-     * converter added in NetworkModule.
+     * The same code works for /sydney/auth and /br/auth. Only CAMPUS_LOCATION
+     * in app/build.gradle.kts needs to change.
      */
+    // Sends a POST request to "{location}/auth". The {location} part is filled in below.
+    // Why no leading slash: so it's added to the end of the base URL.
     @POST("{location}/auth")
+    // The login request. "suspend" means it waits for the server without freezing the app.
     suspend fun login(
+        // This value replaces {location} in the URL, such as "footscray".
         @Path("location") location: String,
+        // This object is turned into JSON and sent as the request body.
         @Body request: LoginRequest
+    // The reply is turned from JSON into a LoginResponse.
     ): LoginResponse
 
     /**
      * GET /dashboard/{keypass}
-     *
-     * The keypass from login goes straight into the URL path. Retrofit
-     * URL-encodes it, so a keypass with a space or slash wouldn't break the path.
      */
+    // Sends a GET request to "dashboard/{keypass}".
     @GET("dashboard/{keypass}")
+    // The dashboard request. Also "suspend", so it waits without freezing the app.
     suspend fun getDashboard(
+        // This value replaces {keypass} in the URL, such as "animals".
         @Path("keypass") keypass: String
+    // The reply is turned from JSON into a DashboardResponse.
     ): DashboardResponse
 }

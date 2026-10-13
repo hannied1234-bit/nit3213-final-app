@@ -1,28 +1,22 @@
+// Says which folder (package) this file belongs to.
 package com.vu.nit3213app.data.remote.dto
 
 /**
  * JSON returned by the dashboard endpoint.
  *
- * Each entity is read as a Map because its field names depend on the topic.
- * Moshi turns JSON strings into String, numbers into Double, true or false into
- * Boolean, arrays into List and nested objects into Map. The EntityMapper then
- * converts these raw maps into tidy [com.vu.nit3213app.domain.model.Entity] objects.
- *
- * The default values mean a missing field in the JSON will not crash the app.
- * KotlinJsonAdapterFactory (added in NetworkModule) is what makes Moshi respect
- * these defaults. Without it, a missing "entities" key would throw instead.
- *
- * DTO stands for Data Transfer Object. Classes in this package mirror the JSON
- * exactly and live only in the data layer. The rest of the app works with the
- * domain models, so a change to the API's JSON only touches this package and
- * the mapper.
- *
  * Example response:
  * { "entities": [ { "name": "...", "description": "..." } ], "entityTotal": 7 }
+ *
+ * DTO stands for Data Transfer Object. Classes in this package mirror the JSON
+ * exactly and live only in the data layer. The EntityMapper then converts these
+ * raw maps into tidy [com.vu.nit3213app.domain.model.Entity] objects.
  */
+// Creates a data class that matches the dashboard JSON. Moshi fills it in from the reply.
 data class DashboardResponse(
-    // Any? because a field's value could be a string, number, boolean, list,
-    // object or null, and Kotlin needs one type that covers all of them.
+    // The list of items. Each item is a map of field name to value, because the fields change per topic.
+    // Why Any?: a value could be text, a number, true or false, a list or missing, and Any? covers them all.
+    // Why "= emptyList()": if the JSON is missing this field, we get an empty list instead of a crash.
     val entities: List<Map<String, Any?>> = emptyList(),
+    // The total number of items, as reported by the server. Defaults to 0 if missing.
     val entityTotal: Int = 0
 )

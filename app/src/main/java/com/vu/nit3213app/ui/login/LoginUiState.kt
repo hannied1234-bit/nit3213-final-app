@@ -1,36 +1,31 @@
+// Says which folder (package) this file belongs to.
 package com.vu.nit3213app.ui.login
 
+// StringRes: marks a number as the ID of a text in strings.xml.
 import androidx.annotation.StringRes
 
 /**
  * Everything the Login screen needs to draw itself at any moment.
  *
- * The Fragment simply renders whatever state it is given, so all decisions live
- * in the ViewModel where they can be unit tested. Errors are string resource IDs
- * (or null when there is no error).
- *
  * This is one data class with several fields, unlike the sealed
- * DashboardUiState. On this screen several things really can be true at once.
- * Both fields can show errors together, for example. Separate fields describe
- * that directly.
+ * DashboardUiState. On this screen several things can be true at once, such as
+ * both fields showing errors together.
  *
  * Every field has a default, so LoginUiState() is the blank form the screen
  * starts with. Changes are made with copy(), which keeps every other field as
  * it was.
  */
+// Creates the state class for the Login screen.
 data class LoginUiState(
-    /** True while the auth request is running. Shows the spinner and locks the form. */
+    // True while signing in. Shows the spinner and locks the form. Starts as false.
     val isLoading: Boolean = false,
-    /** Error under the student ID (username) field, for a blank or badly formatted ID. */
+    // The ID of the error text under the student ID field. null means no error.
     @StringRes val usernameError: Int? = null,
-    /** Error under the first name (password) field, shown when it's left blank. */
+    // The ID of the error text under the first name field. null means no error.
     @StringRes val passwordError: Int? = null,
-    /** Error from the request itself, shown in the banner under the form. */
+    // The ID of the error from the server, shown in the red box. null means no error.
     @StringRes val loginError: Int? = null,
-    /**
-     * Set once login succeeds. The Fragment moves to the Dashboard and then
-     * calls [LoginViewModel.onNavigatedToDashboard], which clears this so the
-     * move only happens once.
-     */
+    // The keypass, set only after a successful login. The Fragment sees it and goes to the Dashboard.
+    // Why it's cleared afterwards: so the move to the Dashboard only happens once.
     val keypass: String? = null
 )

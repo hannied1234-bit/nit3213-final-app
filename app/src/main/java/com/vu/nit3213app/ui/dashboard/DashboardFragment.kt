@@ -1,22 +1,41 @@
+// Says which folder (package) this file belongs to.
 package com.vu.nit3213app.ui.dashboard
 
+// Bundle: a box of saved values Android passes to screens.
 import android.os.Bundle
+// Menu: the list of items in the toolbar.
 import android.view.Menu
+// MenuInflater: builds menu items from an XML file.
 import android.view.MenuInflater
+// MenuItem: one item in the toolbar menu, such as "Log out".
 import android.view.MenuItem
+// View: the base class for everything you see on screen.
 import android.view.View
+// MenuProvider: the modern way for a screen to add items to the toolbar.
 import androidx.core.view.MenuProvider
+// isVisible: a shortcut for showing or hiding a view with true or false.
 import androidx.core.view.isVisible
+// Fragment: the base class for a screen inside the Activity.
 import androidx.fragment.app.Fragment
+// viewModels: the "by viewModels()" helper that creates the ViewModel.
 import androidx.fragment.app.viewModels
+// Lifecycle: describes the stages a screen goes through, such as RESUMED.
 import androidx.lifecycle.Lifecycle
+// NavDirections: an action that says which screen to go to, with any values attached.
 import androidx.navigation.NavDirections
+// findNavController: finds the object that moves between screens.
 import androidx.navigation.fragment.findNavController
+// R: the generated list of IDs for layouts, strings and images.
 import com.vu.nit3213app.R
+// FragmentDashboardBinding: generated from fragment_dashboard.xml, holds every view on this screen.
 import com.vu.nit3213app.databinding.FragmentDashboardBinding
+// Entity: one tidy item from the list.
 import com.vu.nit3213app.domain.model.Entity
+// collectWhenStarted: our helper that watches the ViewModel's state.
 import com.vu.nit3213app.ui.common.collectWhenStarted
+// DetailsFragment: the next screen. Imported so the comment below can link to it.
 import com.vu.nit3213app.ui.details.DetailsFragment
+// AndroidEntryPoint: the Hilt label that lets Hilt inject into this class.
 import dagger.hilt.android.AndroidEntryPoint
 
 /**
@@ -24,105 +43,94 @@ import dagger.hilt.android.AndroidEntryPoint
  * Tapping an item opens the [DetailsFragment] for that entity.
  *
  * The Fragment holds no data of its own. It watches [DashboardViewModel.uiState]
- * and redraws the screen from whatever state arrives, so the screen always
- * matches the ViewModel. After a rotation the new Fragment gets the same
- * ViewModel back and draws the list that was already loaded, with no second
- * network call.
- *
- * Passing the layout ID to the Fragment constructor lets Fragment inflate the
- * view itself, so there's no onCreateView override.
+ * and redraws the screen from whatever state arrives. After a rotation the new
+ * Fragment gets the same ViewModel back and draws the list that was already
+ * loaded, with no second network call.
  */
+// Tells Hilt it's allowed to deliver things (the ViewModel) to this screen.
 @AndroidEntryPoint
+// Creates the Dashboard screen class, built from fragment_dashboard.xml.
 class DashboardFragment : Fragment(R.layout.fragment_dashboard) {
 
-    // by viewModels() ties the ViewModel to this Fragment. Because of
-    // @AndroidEntryPoint, Hilt builds it, injects the repository and fills its
-    // SavedStateHandle with the Safe Args arguments (the keypass).
+    // Gets this screen's ViewModel. Hilt builds it and gives it the repository and the keypass.
     private val viewModel: DashboardViewModel by viewModels()
 
-    // The binding only exists between onViewCreated and onDestroyView. Holding it
-    // in a nullable field and clearing it in onDestroyView avoids a memory leak.
-    // The non-null "binding" getter saves writing _binding!! everywhere, but it
-    // will throw if it's used after the view is gone.
+    // Holds the views of this screen. Null until the views are built.
     private var _binding: FragmentDashboardBinding? = null
+    // A shortcut that returns _binding without the null check. Crashes if used after the views are gone.
     private val binding get() = _binding!!
 
-    // Created once per Fragment rather than once per view, so the adapter
-    // survives the view being rebuilt. ::openDetails passes the function itself
-    // as the click handler, which keeps the adapter unaware of what a tap does.
+    // Creates the list adapter once. ::openDetails is the function to run when an item is tapped.
+    // Why here and not in onViewCreated: so the adapter survives the views being rebuilt.
     private val entityAdapter = EntityAdapter(onEntityClick = ::openDetails)
 
+    // Android calls this once the screen's views have been built.
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        // Lets the parent Fragment class do its own set-up first.
         super.onViewCreated(view, savedInstanceState)
-        // bind() wraps the view Fragment already inflated instead of
-        // inflating a second copy.
+        // Connects the binding to the views that were just built.
         _binding = FragmentDashboardBinding.bind(view)
 
-        // The LinearLayoutManager is set in the XML layout, so only the adapter
-        // needs connecting here.
+        // Gives the list its adapter, which creates and fills the rows.
+        // Why only the adapter: the layout manager (vertical list) is already set in the XML.
         binding.entityRecyclerView.adapter = entityAdapter
-
-        // "Try again" just asks the ViewModel to load again. The ViewModel
-        // switches to Loading and render() swaps the error for the spinner.
+        // When "Try again" is tapped, ask the ViewModel to load the list again.
         binding.retryButton.setOnClickListener { viewModel.loadEntities() }
 
+        // Adds the "Log out" item to the toolbar (see below).
         setUpLogOutMenu()
-
-        // Starts drawing states. The first value arrives straight away, because
-        // a StateFlow always holds one.
+        // Starts watching the ViewModel's state. Every time it changes, render() redraws the screen.
         collectWhenStarted(viewModel.uiState, ::render)
     }
 
     /**
-     * Draws one [DashboardUiState] onto the screen.
-     *
-     * Every visibility flag is set on every call, whatever the state. That way
-     * a view from an old state can't stay visible by mistake. Going from Error
-     * to Success, for example, also hides the error layout.
+     * Draws one [DashboardUiState] onto the screen. Every view is set on every
+     * call, so nothing from an old state can stay visible by mistake.
      */
     private fun render(state: DashboardUiState) {
-        // Exactly one of these four views is visible at a time. They're stacked
-        // in a FrameLayout in fragment_dashboard.xml.
+        // Shows the spinning circle only while loading.
         binding.progressIndicator.isVisible = state is DashboardUiState.Loading
+        // Shows the error message and "Try again" button only when there's an error.
         binding.errorLayout.isVisible = state is DashboardUiState.Error
-        // A successful but empty reply gets its own message, since an empty
-        // list with no explanation looks like the app is broken.
+        // Shows the list only when loading worked and there's at least one item.
         binding.contentLayout.isVisible =
+            // "is" checks the state type, and && means both must be true.
             state is DashboardUiState.Success && state.entities.isNotEmpty()
+        // Shows the "nothing here" message when loading worked but the list is empty.
         binding.emptyText.isVisible =
+            // Success, and the list has no items.
             state is DashboardUiState.Success && state.entities.isEmpty()
 
-        // The visibility above is shared. This "when" fills in the content only
-        // the current state has.
+        // Now fills in the content that only the current state has.
         when (state) {
+            // Loading: nothing extra to fill in. Unit means "do nothing".
             is DashboardUiState.Loading -> Unit
+            // Success: fill in the count and the list.
             is DashboardUiState.Success -> {
-                // getQuantityString picks "1 item" or "7 items" from the plurals
-                // resource. The total is passed twice. The first picks the
-                // plural form and the second fills the %d in the text.
+                // Sets the count text, such as "7 items" or "1 item".
                 binding.entityCountText.text = resources.getQuantityString(
+                    // The plurals entry in strings.xml that has "item" and "items".
                     R.plurals.entity_count,
+                    // This number picks the singular or plural form.
                     state.total,
+                    // This number fills in the %d in the text.
                     state.total
                 )
-                // ListAdapter compares the new list with the old one on a
-                // background thread and only redraws rows that changed.
+                // Hands the new list to the adapter, which redraws only the rows that changed.
                 entityAdapter.submitList(state.entities)
             }
 
-            // The ViewModel sends a string resource ID, so the text is looked
-            // up here, where a Context is available.
+            // Error: put the error message text on screen.
             is DashboardUiState.Error -> binding.errorMessageText.setText(state.messageRes)
         }
     }
 
     /**
      * Opens the Details screen for the tapped [entity].
-     *
-     * The Safe Args Directions class takes the Entity as a typed parameter, so
-     * passing the wrong type is a compile error instead of a crash at runtime.
      */
+    // Runs when a card in the list is tapped.
     private fun openDetails(entity: Entity) {
+        // Builds the "go to Details" action with the tapped Entity attached, then goes there safely.
         navigateSafely(DashboardFragmentDirections.actionDashboardFragmentToDetailsFragment(entity))
     }
 
@@ -130,56 +138,59 @@ class DashboardFragment : Fragment(R.layout.fragment_dashboard) {
      * Adds a "Log out" item to the toolbar while this screen is showing.
      * Passing viewLifecycleOwner removes the item automatically when the user
      * leaves the Dashboard.
-     *
-     * MenuProvider replaces the old setHasOptionsMenu() and
-     * onCreateOptionsMenu() pair, which are deprecated. The toolbar belongs to
-     * MainActivity, so the provider is added to the Activity.
      */
     private fun setUpLogOutMenu() {
+        // Adds a menu provider to the Activity, since the toolbar belongs to the Activity.
         requireActivity().addMenuProvider(object : MenuProvider {
+            // Android calls this to build the menu.
             override fun onCreateMenu(menu: Menu, menuInflater: MenuInflater) {
+                // Builds the "Log out" item from res/menu/menu_dashboard.xml.
                 menuInflater.inflate(R.menu.menu_dashboard, menu)
             }
 
-            // Returning true tells the system this item was handled here.
-            // False lets other providers, or the up arrow, handle it instead.
+            // Android calls this when a menu item is tapped.
             override fun onMenuItemSelected(menuItem: MenuItem): Boolean {
+                // Checks whether the tapped item is "Log out".
                 return if (menuItem.itemId == R.id.action_log_out) {
-                    // The action pops the Dashboard off the back stack (see
-                    // nav_graph.xml), so pressing Back on Login closes the app
-                    // instead of returning to the signed-in list.
+                    // Goes back to the Login screen.
+                    // Why Back then exits: nav_graph.xml removes the Dashboard from the history.
                     navigateSafely(DashboardFragmentDirections.actionDashboardFragmentToLoginFragment())
+                    // Returns true to say "handled".
                     true
+                // Any other item.
                 } else {
+                    // Returns false to say "not handled here".
                     false
                 }
             }
-            // RESUMED means the menu item only shows while this screen is in
-            // front. It disappears when Details opens on top.
+        // viewLifecycleOwner and RESUMED: the item only shows while this screen is in front.
         }, viewLifecycleOwner, Lifecycle.State.RESUMED)
     }
 
     /**
      * Only moves to another screen if the Dashboard is still the current one.
      * Without this check, tapping two items very quickly would try to move twice
-     * and the second attempt would crash, because the action no longer exists
-     * from the Details screen.
+     * and the second attempt would crash.
      */
     private fun navigateSafely(directions: NavDirections) {
+        // Gets the object that moves between screens.
         val navController = findNavController()
+        // Checks that we're still on the Dashboard.
         if (navController.currentDestination?.id == R.id.dashboardFragment) {
+            // We are, so perform the move.
             navController.navigate(directions)
         }
     }
 
+    // Android calls this when the screen's views are destroyed.
     override fun onDestroyView() {
+        // Lets the parent Fragment class do its own clean-up first.
         super.onDestroyView()
-        // The adapter outlives the view, so it is detached to avoid leaking the
-        // old RecyclerView.
+        // Unhooks the adapter from the list.
+        // Why: the adapter outlives the views, and holding the old list would leak memory.
         binding.entityRecyclerView.adapter = null
-        // Cleared last, because the line above still needs the binding. When
-        // the user opens Details, this Fragment stays on the back stack without
-        // a view, and holding the binding would keep the old views in memory.
+        // Forgets the views so they can be removed from memory.
+        // Why last: the line above still needed the binding.
         _binding = null
     }
 }

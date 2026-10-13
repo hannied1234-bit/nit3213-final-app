@@ -1,94 +1,113 @@
+// Says which folder (package) this file belongs to.
 package com.vu.nit3213app.ui.login
 
+// StringRes: marks a number as the ID of a text in strings.xml.
 import androidx.annotation.StringRes
+// ViewModel: the base class for holding screen state that survives rotation.
 import androidx.lifecycle.ViewModel
+// viewModelScope: a place to start coroutines that stop when the ViewModel is cleared.
 import androidx.lifecycle.viewModelScope
+// R: the generated list of IDs for layouts, strings and images.
 import com.vu.nit3213app.R
+// DataResult: our "worked or failed" result type.
 import com.vu.nit3213app.domain.model.DataResult
+// AuthRepository: the interface for logging in.
 import com.vu.nit3213app.domain.repository.AuthRepository
+// toMessageRes: turns a DataError into the ID of its message text.
 import com.vu.nit3213app.ui.common.toMessageRes
+// HiltViewModel: the Hilt label that lets Hilt build this ViewModel.
 import dagger.hilt.android.lifecycle.HiltViewModel
+// MutableStateFlow: a value holder that can be changed and watched.
 import kotlinx.coroutines.flow.MutableStateFlow
+// StateFlow: a read-only value holder that can be watched.
 import kotlinx.coroutines.flow.StateFlow
+// asStateFlow: gives a read-only view of a MutableStateFlow.
 import kotlinx.coroutines.flow.asStateFlow
+// update: changes a StateFlow's value safely in one step.
 import kotlinx.coroutines.flow.update
+// launch: starts a coroutine.
 import kotlinx.coroutines.launch
+// Inject: the label that tells Hilt it can build this class.
 import javax.inject.Inject
 
 /**
  * Holds the Login screen's state and logic: validating the form, calling the
  * auth endpoint and reporting the result.
  *
- * @HiltViewModel plus the @Inject constructor lets Hilt create this ViewModel and
- * pass in an [AuthRepository]. The ViewModel only knows the interface, never the
- * Retrofit details, which is what makes it simple to test with a mock.
- *
- * The form is checked here before any request goes out. Catching an empty
- * field locally gives the user instant feedback, and it avoids a slow round
- * trip to a server that might still be waking up.
+ * The ViewModel only knows the AuthRepository interface, never the Retrofit
+ * details, which is what makes it simple to test with a mock. The form is
+ * checked here before any request goes out, which gives the user instant
+ * feedback and avoids a slow trip to a server that might still be waking up.
  */
+// Lets Hilt build this ViewModel.
 @HiltViewModel
+// Creates the ViewModel class. "@Inject constructor" lets Hilt fill in the value below.
 class LoginViewModel @Inject constructor(
+    // Asks Hilt for the repository that does the login.
     private val authRepository: AuthRepository
+// Builds on Android's ViewModel class.
 ) : ViewModel() {
 
-    // The mutable version is private so only this class can change the state.
-    // The Fragment gets a read-only StateFlow (the pattern from Lecture 5).
+    // The state the screen shows. Starts as a blank form. Private, so only this class can change it.
     private val _uiState = MutableStateFlow(LoginUiState())
+    // A read-only view of the state, for the Fragment to watch. The Fragment can't change it.
     val uiState: StateFlow<LoginUiState> = _uiState.asStateFlow()
 
     /** Called when the user taps "Sign in" or presses Done on the keyboard. */
     fun login(username: String, password: String) {
-        // Ignore extra taps while a request is already running.
-        // The button is disabled while loading, but a fast double tap can land
-        // before the screen redraws. This check stops a second request either way.
+        // If a sign in is already running, stop here.
+        // Why: stops a fast double tap from sending two requests.
         if (_uiState.value.isLoading) return
 
-        // Stray spaces are a common typing mistake on mobile keyboards.
-        // Autocomplete often adds a space after a word, and the API would
-        // reject "Adam " even though the user typed their name correctly.
-        // Only spaces are removed. The first name is case sensitive on the
-        // server, so its capital letters are sent exactly as typed.
+        // Removes spaces from the start and end of the student ID.
+        // Why: keyboards often add a space after a word, and the server would reject it.
         val trimmedUsername = username.trim()
+        // Removes spaces from the first name. Capital letters are kept, because they matter.
         val trimmedPassword = password.trim()
 
-        // Both fields are checked before returning, so the user sees every
-        // problem at once instead of fixing them one at a time.
+        // Checks the student ID. Gives an error message ID, or null if it's fine.
         val usernameError = validateUsername(trimmedUsername)
+        // Checks the first name the same way.
+        // Why both before stopping: so the user sees every problem at once.
         val passwordError = validatePassword(trimmedPassword)
+        // If either field has a problem...
         if (usernameError != null || passwordError != null) {
+            // ...update the state to show the errors.
             _uiState.update {
+                // copy() keeps everything else the same and changes only these fields.
                 it.copy(
+                    // The student ID error, or null.
                     usernameError = usernameError,
+                    // The first name error, or null.
                     passwordError = passwordError,
-                    // An old server error would be misleading next to new
-                    // field errors, so it's cleared.
+                    // Clears any old server error, which would be confusing next to the new ones.
                     loginError = null
                 )
             }
+            // Stops here. Nothing is sent to the server.
             return
         }
 
-        // update {} changes the state atomically. It reads the current value,
-        // applies the copy and writes it back in one step, so two updates
-        // can't overwrite each other.
+        // Both fields are fine, so switch on loading and clear all errors.
         _uiState.update {
+            // Spinner on, every error off.
             it.copy(isLoading = true, usernameError = null, passwordError = null, loginError = null)
         }
 
-        // viewModelScope is cancelled automatically when the ViewModel is cleared,
-        // so the request cannot outlive the screen and leak memory.
+        // Starts a coroutine, so waiting for the server doesn't freeze the app.
+        // Why viewModelScope: it's cancelled automatically if the user leaves the screen.
         viewModelScope.launch {
+            // Sends the details to the repository, waits for the answer, then checks which kind it is.
             when (val result = authRepository.login(trimmedUsername, trimmedPassword)) {
-                // The keypass goes into the state. The Fragment sees it and
-                // moves to the Dashboard.
+                // It worked: update the state...
                 is DataResult.Success -> _uiState.update {
+                    // ...spinner off, and store the keypass. The Fragment sees it and goes to the Dashboard.
                     it.copy(isLoading = false, keypass = result.data)
                 }
 
-                // The repository has already sorted the failure into a
-                // DataError. Here it only needs a message.
+                // It failed: update the state...
                 is DataResult.Error -> _uiState.update {
+                    // ...spinner off, and store the message for the error kind (such as no internet).
                     it.copy(isLoading = false, loginError = result.error.toMessageRes())
                 }
             }
@@ -97,53 +116,55 @@ class LoginViewModel @Inject constructor(
 
     /**
      * Clears the student ID error as soon as the user starts fixing it.
-     * The server error is cleared too, because the user is changing the very
-     * thing it complained about.
      */
+    // The Fragment calls this every time the student ID text changes.
     fun onUsernameChanged() {
+        // Removes the student ID error and the server error.
         _uiState.update { it.copy(usernameError = null, loginError = null) }
     }
 
     /** Clears the first name error as soon as the user starts fixing it. */
+    // The Fragment calls this every time the first name text changes.
     fun onPasswordChanged() {
+        // Removes the first name error and the server error.
         _uiState.update { it.copy(passwordError = null, loginError = null) }
     }
 
     /**
-     * Called by the Fragment once it has moved to the Dashboard. Clearing the
-     * keypass means the move happens only once, even if the state is drawn again.
+     * Called by the Fragment once it has moved to the Dashboard.
      */
+    // Clears the keypass after it's been used.
     fun onNavigatedToDashboard() {
+        // Sets the keypass back to null.
+        // Why: so the move to the Dashboard can't happen a second time.
         _uiState.update { it.copy(keypass = null) }
     }
 
-    // Each validator returns a message ID for a problem, or null when the input
-    // is fine. Returning the ID means the caller can drop it straight into the
-    // state without any more checks.
-    // The username is the student ID. Checked in order: a blank field gets
-    // "required" instead of a format error, which would be confusing for an
-    // empty box.
+    // Marks the returned number as a strings.xml ID.
     @StringRes
+    // Checks the student ID. Returns an error message ID, or null if it's fine.
     private fun validateUsername(username: String): Int? = when {
+        // Empty: "Please enter your student ID".
+        // Why first: an empty box should get "required", not a confusing format error.
         username.isEmpty() -> R.string.error_username_required
+        // Not digits only (such as "s12345678"): "Enter your student ID as numbers only...".
         !STUDENT_ID_PATTERN.matches(username) -> R.string.error_username_format
+        // Otherwise it's fine.
         else -> null
     }
 
-    // The password is the first name. Only emptiness is checked. Names come in
-    // too many forms (hyphens, apostrophes, accents) for a pattern to be fair,
-    // so the server decides whether it's correct.
+    // Marks the returned number as a strings.xml ID.
     @StringRes
+    // Checks the first name. Only checks it isn't empty.
+    // Why no pattern: names have hyphens, apostrophes and accents, so the server decides.
     private fun validatePassword(password: String): Int? =
+        // Empty: "Please enter your first name". Otherwise null, meaning fine.
         if (password.isEmpty()) R.string.error_password_required else null
 
+    // Holds fixed values for this class only.
     private companion object {
-        // Digits only, for example 12345678. The spec says the ID is sent
-        // without the "s" printed on student cards, so "s12345678" fails here
-        // with a message telling the user to drop the "s".
-        // ^ and $ anchor the pattern to the whole string, so "123abc" fails.
-        // matches() needs a full match anyway, but the anchors make the intent
-        // obvious to a reader.
+        // A pattern meaning "digits only", such as 12345678.
+        // ^ means start, \\d+ means one or more digits, $ means end. So "s123" or "123abc" fail.
         val STUDENT_ID_PATTERN = Regex("^\\d+$")
     }
 }

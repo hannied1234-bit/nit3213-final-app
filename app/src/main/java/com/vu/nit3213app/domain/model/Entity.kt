@@ -1,6 +1,9 @@
+// Says which folder (package) this file belongs to.
 package com.vu.nit3213app.domain.model
 
+// Parcelable: lets an object be packed up and passed between screens.
 import android.os.Parcelable
+// Parcelize: writes the Parcelable packing code for us.
 import kotlinx.parcelize.Parcelize
 
 /**
@@ -9,44 +12,31 @@ import kotlinx.parcelize.Parcelize
  * The fields inside each entity change depending on the topic (keypass) the API
  * gives you, so instead of hard-coding names like "artistName" we keep a list of
  * label and value pairs. This means the app works with any topic.
- *
- * @Parcelize generates the Parcelable code that lets Safe Args pass a whole
- * Entity from the Dashboard screen to the Details screen.
- *
- * Passing the whole object means the Details screen doesn't need to fetch
- * anything, because it already has every field. The API has no endpoint for
- * a single entity anyway, so passing an ID wouldn't work.
- *
- * Being a data class gives Entity an equals() that compares every field.
- * EntityAdapter's DiffUtil callback depends on that, since the API sends no
- * unique ID.
  */
+// Writes the code that lets an Entity be passed from the Dashboard to Details.
 @Parcelize
+// Creates the Entity data class. "data class" gives it an equals() that compares every field.
 data class Entity(
-    /** Every field except the description, in the order the API returned them. */
+    // Every field except the description, in the order the server sent them.
     val properties: List<EntityProperty>,
-    /** The long description, shown only on the Details screen. Empty if missing. */
+    // The long description, shown only on the Details screen. Empty if missing.
     val description: String
+// ": Parcelable" means it can be packed up and passed between screens.
 ) : Parcelable {
 
-    // The three properties below are computed with get() instead of stored.
-    // @Parcelize only writes constructor properties into the Parcel, so these
-    // add nothing to the data passed between screens. They're recalculated
-    // from properties whenever they're read.
-
-    /** The first field's value is used as the headline for the item. */
+    // The headline: the first field's value, such as "Pablo Picasso".
     val title: String
+        // Worked out when read. If there are no fields, gives "" instead of crashing.
         get() = properties.firstOrNull()?.value.orEmpty()
 
-    /** The first field's label, shown as a small heading above the title. */
+    // The first field's label, such as "Artist name". Shown small above the headline.
     val titleLabel: String
+        // Worked out when read. Gives "" if there are no fields.
         get() = properties.firstOrNull()?.label.orEmpty()
 
-    /**
-     * The remaining fields, shown as the summary on the Dashboard screen.
-     * drop(1) skips the headline field so it isn't printed twice on the card.
-     */
+    // Every field after the first one. Shown as the summary on the Dashboard card.
     val summaryProperties: List<EntityProperty>
+        // drop(1) skips the first field, so the headline isn't shown twice.
         get() = properties.drop(1)
 }
 
@@ -54,12 +44,14 @@ data class Entity(
  * A single field of an [Entity], already formatted for display.
  * For example, the JSON pair "artistName": "Pablo Picasso" becomes
  * label = "Artist name" and value = "Pablo Picasso".
- *
- * It's Parcelable as well, since a Parcelable class can only contain types
- * that can also be written to a Parcel.
  */
+// Writes the packing code, since anything inside a Parcelable must also be Parcelable.
 @Parcelize
+// Creates the label and value pair class.
 data class EntityProperty(
+    // The readable field name, such as "Artist name".
     val label: String,
+    // The value as text, such as "Pablo Picasso".
     val value: String
+// Can be packed up and passed between screens.
 ) : Parcelable

@@ -1,95 +1,108 @@
+// Says which folder (package) this file belongs to.
 package com.vu.nit3213app.ui.dashboard
 
+// SavedStateHandle: holds the values passed to this screen, such as the keypass.
 import androidx.lifecycle.SavedStateHandle
+// ViewModel: the base class for holding screen state that survives rotation.
 import androidx.lifecycle.ViewModel
+// viewModelScope: a place to start coroutines that stop when the ViewModel is cleared.
 import androidx.lifecycle.viewModelScope
+// R: the generated list of IDs for layouts, strings and images.
 import com.vu.nit3213app.R
+// DataResult: our "worked or failed" result type.
 import com.vu.nit3213app.domain.model.DataResult
+// DashboardRepository: the interface for fetching the dashboard.
 import com.vu.nit3213app.domain.repository.DashboardRepository
+// toMessageRes: turns a DataError into the ID of its message text.
 import com.vu.nit3213app.ui.common.toMessageRes
+// HiltViewModel: the Hilt label that lets Hilt build this ViewModel.
 import dagger.hilt.android.lifecycle.HiltViewModel
+// MutableStateFlow: a value holder that can be changed and watched.
 import kotlinx.coroutines.flow.MutableStateFlow
+// StateFlow: a read-only value holder that can be watched.
 import kotlinx.coroutines.flow.StateFlow
+// asStateFlow: gives a read-only view of a MutableStateFlow.
 import kotlinx.coroutines.flow.asStateFlow
+// launch: starts a coroutine.
 import kotlinx.coroutines.launch
+// Inject: the label that tells Hilt it can build this class.
 import javax.inject.Inject
 
 /**
  * Loads the entity list for the Dashboard screen.
  *
- * Hilt injects two things:
- * - [DashboardRepository], to fetch the data.
- * - [SavedStateHandle], which already contains the arguments passed to this
- *   screen. The "keypass" passed from the Login screen with Safe Args can be
- *   read from it, so the Fragment does not have to hand it over manually.
+ * Hilt injects two things: the [DashboardRepository], to fetch the data, and a
+ * [SavedStateHandle], which already contains the keypass passed from the Login
+ * screen with Safe Args.
  *
- * A ViewModel outlives its Fragment's view. Rotating the phone destroys and
- * rebuilds the Fragment, but this object and its state stay put. That's why
- * the list doesn't reload on every rotation.
+ * A ViewModel outlives its Fragment's views. Rotating the phone rebuilds the
+ * Fragment, but this object and its state stay put, so the list doesn't reload.
  */
+// Lets Hilt build this ViewModel.
 @HiltViewModel
+// Creates the ViewModel class. "@Inject constructor" lets Hilt fill in the two values below.
 class DashboardViewModel @Inject constructor(
+    // Asks Hilt for the repository that fetches the dashboard.
     private val dashboardRepository: DashboardRepository,
+    // Asks Hilt for the screen's saved values, which include the keypass.
     savedStateHandle: SavedStateHandle
+// Builds on Android's ViewModel class.
 ) : ViewModel() {
 
-    // Nullable because a SavedStateHandle lookup can't promise the key exists.
-    // In the running app Safe Args always provides it, but loadEntities()
-    // still checks, so a missing keypass shows an error rather than a crash.
-    // SavedStateHandle also survives the process being killed in the
-    // background, so the keypass is still here when the user comes back.
+    // Reads the keypass from the saved values. "String?" means it could be missing (null).
     private val keypass: String? = savedStateHandle[KEYPASS_ARGUMENT]
 
-    // The mutable version is private so only this class can change the state.
-    // The Fragment gets a read-only StateFlow. It starts as Loading because
-    // init kicks off a request straight away.
+    // The state the screen shows. Starts as Loading. Private, so only this class can change it.
     private val _uiState = MutableStateFlow<DashboardUiState>(DashboardUiState.Loading)
+    // A read-only view of the state, for the Fragment to watch.
     val uiState: StateFlow<DashboardUiState> = _uiState.asStateFlow()
 
+    // Runs once, as soon as the ViewModel is created.
     init {
-        // Load straight away. Because the ViewModel survives rotation, this only
-        // runs once per visit to the screen, not every time the device turns.
+        // Starts loading the list straight away.
+        // Why only once: the ViewModel survives rotation, so this doesn't rerun when the phone turns.
         loadEntities()
     }
 
     /** Fetches the list. Also called by the "Try again" button after an error. */
     fun loadEntities() {
-        // Copied into a local val so Kotlin can smart-cast it to a non-null
-        // String after the check below. Smart casts don't work directly on a
-        // class property.
+        // Copies the keypass into a local value.
+        // Why: Kotlin can then be sure it isn't null after the check below.
         val currentKeypass = keypass
+        // Checks whether the keypass is missing or empty.
         if (currentKeypass.isNullOrBlank()) {
+            // It is, so show the "session expired" error.
             _uiState.value = DashboardUiState.Error(R.string.error_missing_keypass)
+            // Stops here without calling the server.
             return
         }
 
-        // Set before the coroutine starts, so "Try again" swaps the error
-        // message for the spinner on the same frame the user taps it.
+        // Shows the spinner. On "Try again" this swaps the error for the spinner straight away.
         _uiState.value = DashboardUiState.Loading
 
-        // viewModelScope is cancelled when the ViewModel is cleared (the user
-        // leaves the Dashboard for good), so a slow request can't write to a
-        // screen that no longer exists.
+        // Starts a coroutine, so waiting for the server doesn't freeze the app.
+        // Why viewModelScope: it's cancelled automatically if the user leaves the Dashboard.
         viewModelScope.launch {
-            // The "when" is an expression, so its result is assigned straight
-            // to the state. DataResult is sealed, so leaving out a branch
-            // wouldn't compile.
+            // Asks the repository for the list, waits for the answer, then sets the state from it.
             _uiState.value = when (val result = dashboardRepository.getDashboard(currentKeypass)) {
+                // It worked: turn the result into a Success state.
                 is DataResult.Success -> DashboardUiState.Success(
+                    // The tidy items.
                     entities = result.data.entities,
+                    // The total count.
                     total = result.data.total
                 )
 
+                // It failed: turn the error kind into its message ID and show an Error state.
                 is DataResult.Error -> DashboardUiState.Error(result.error.toMessageRes())
             }
         }
     }
 
+    // Holds values shared across the whole class.
     companion object {
-        /**
-         * Must match the argument name in nav_graph.xml. It's public so
-         * DashboardViewModelTest can build a SavedStateHandle with the same key.
-         */
+        // The name the keypass is saved under. Must match the argument name in nav_graph.xml.
+        // Why public: the unit test uses the same name to pass in a keypass.
         const val KEYPASS_ARGUMENT = "keypass"
     }
 }

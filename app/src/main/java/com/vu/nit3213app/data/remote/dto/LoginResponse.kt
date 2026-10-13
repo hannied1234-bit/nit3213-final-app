@@ -1,13 +1,12 @@
+// Says which folder (package) this file belongs to.
 package com.vu.nit3213app.data.remote.dto
 
 /**
  * JSON returned by a successful login: { "keypass": "topicName" }
- *
- * The keypass names the student's topic, and it's the only thing the dashboard
- * endpoint needs. It has no default value on purpose. A 200 reply without a
- * keypass is broken, so Moshi throws and safeApiCall reports a general error
- * rather than letting the app carry on with an empty keypass.
  */
+// Creates a data class that Moshi fills in from the login reply.
 data class LoginResponse(
+    // The keypass (your topic name), which the dashboard request needs.
+    // Why no default: a reply without a keypass is broken, so it should fail and show an error.
     val keypass: String
 )
