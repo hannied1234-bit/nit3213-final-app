@@ -18,6 +18,12 @@ Other points:
 - **Light and dark mode** using a custom Material 3 colour scheme.
 - **Handles rotation** without reloading, because state lives in the ViewModels.
 
+## Screenshots
+
+| Login | Login validation |
+| --- | --- |
+| <img src="docs/screenshots/login.png" width="260" alt="Login screen"> | <img src="docs/screenshots/login-errors.png" width="260" alt="Login screen showing field errors"> |
+
 ## Requirements
 
 - **Android Studio** Ladybug (2024.2) or newer
@@ -109,14 +115,40 @@ app/src/test/java/com/vu/nit3213app/
 
 The code is split into three layers, and dependencies only point inwards (the Dependency Rule from Lecture 4):
 
-```
-UI layer        Fragment  --observes-->  ViewModel (StateFlow of UiState)
-                                             |  calls
-                                             v
-Domain layer                     Repository interface  (Entity, DataResult)
-                                             ^  implemented by
-                                             |
-Data layer      RepositoryImpl --> NitApiService (Retrofit) --> vu-nit3213-api
+```mermaid
+flowchart TB
+    subgraph UI["UI layer"]
+        direction LR
+        F["Fragments<br/>Login · Dashboard · Details"]
+        VM["ViewModels<br/>StateFlow&lt;UiState&gt;"]
+        F -- "user actions" --> VM
+        VM -- "UiState" --> F
+    end
+
+    subgraph Domain["Domain layer (plain Kotlin)"]
+        direction LR
+        RI["Repository interfaces<br/>AuthRepository · DashboardRepository"]
+        M["Models<br/>Entity · DataResult · DataError"]
+    end
+
+    subgraph Data["Data layer"]
+        direction LR
+        IMPL["AuthRepositoryImpl<br/>DashboardRepositoryImpl"]
+        MAP["EntityMapper"]
+        API["NitApiService<br/>Retrofit + Moshi + OkHttp"]
+        IMPL --> MAP
+        IMPL --> API
+    end
+
+    SERVER[("vu-nit3213-api")]
+
+    VM -- "calls" --> RI
+    IMPL -. "implements" .-> RI
+    API -- "HTTPS" --> SERVER
+
+    HILT{{"Hilt<br/>NetworkModule · RepositoryModule"}}
+    HILT -. "injects" .-> VM
+    HILT -. "injects" .-> IMPL
 ```
 
 - **UI layer.** Fragments only draw state and forward user actions. Each ViewModel exposes a single read-only `StateFlow` of a `UiState`, so the screen is always drawn from one source of truth. Errors are exposed as string resource IDs, which keeps the ViewModels free of Android `Context` and easy to unit test.
@@ -129,6 +161,44 @@ Data layer      RepositoryImpl --> NitApiService (Retrofit) --> vu-nit3213-api
 
 - Login to Dashboard passes the `keypass` String. `DashboardViewModel` reads it from its `SavedStateHandle`.
 - Dashboard to Details passes the whole selected `Entity`, which is `@Parcelize`d.
+
+```mermaid
+flowchart LR
+    L["Login"] -- "keypass: String<br/>(Login popped off back stack)" --> D["Dashboard"]
+    D -- "entity: Entity" --> DT["Details"]
+    DT -- "back" --> D
+    D -- "Log out" --> L
+```
+
+### Sign-in flow
+
+What happens from tapping **Sign in** to seeing the list:
+
+```mermaid
+sequenceDiagram
+    actor User
+    participant LF as LoginFragment
+    participant LVM as LoginViewModel
+    participant AR as AuthRepositoryImpl
+    participant API as vu-nit3213-api
+    participant DVM as DashboardViewModel
+    participant DR as DashboardRepositoryImpl
+
+    User->>LF: Taps Sign in
+    LF->>LVM: login(username, password)
+    LVM->>LVM: Validate and trim fields
+    LVM->>AR: login(...)
+    AR->>API: POST /footscray/auth
+    API-->>AR: { "keypass": "..." }
+    AR-->>LVM: DataResult.Success(keypass)
+    LVM-->>LF: UiState with keypass
+    LF->>DVM: Navigate with Safe Args (keypass)
+    DVM->>DR: getDashboard(keypass)
+    DR->>API: GET /dashboard/{keypass}
+    API-->>DR: entities JSON
+    DR-->>DVM: DataResult.Success(DashboardData)
+    DVM-->>User: DashboardUiState.Success, list shown
+```
 
 ## Dependency injection with Hilt
 
