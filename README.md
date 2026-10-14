@@ -252,3 +252,7 @@ All versions are kept in one place: `gradle/libs.versions.toml`.
 - **Sign in times out the first time**: the server was asleep. Wait a moment and try again.
 - **"Sign in failed" with the right details**: check the capital letters in your first name, and make sure the student ID has no `s` in front.
 - **Want to see the raw JSON for your topic?** Debug builds log every request and response. In Logcat, filter by `okhttp`.
+
+## References
+
+Anthropic. (2026). *Claude* (Opus 5.5 version) [Large language model]. https://claude.ai/
