@@ -40,6 +40,6 @@ dependencyResolutionManagement {
 }
 
 // The project's name, as shown in Android Studio.
-rootProject.name = "NIT3213FinalApp"
+rootProject.name = "s8101707Assignment2"
 // Includes the "app" module, which holds all the code.
 include(":app")
